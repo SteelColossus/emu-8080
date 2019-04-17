@@ -1,0 +1,7 @@
+[package]
+name = "emu-8080"
+version = "0.1.0"
+authors = ["Michael Winkworth"]
+edition = "2018"
+
+[dependencies]
