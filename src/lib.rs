@@ -375,9 +375,9 @@ impl Location for RestartNumber {}
 
 #[derive(Debug)]
 pub struct Instruction<'a> {
-    operation: Operation,
-    to: Option<Box<Location + 'a>>,
-    from: Option<Box<Location + 'a>>,
+    pub operation: Operation,
+    to: Option<Box<dyn Location + 'a>>,
+    from: Option<Box<dyn Location + 'a>>,
     content: Option<u8>,
     content_high: Option<u8>,
 }
@@ -385,8 +385,8 @@ pub struct Instruction<'a> {
 impl<'a> Instruction<'a> {
     fn new(
         operation: Operation,
-        to: Option<Box<Location + 'a>>,
-        from: Option<Box<Location + 'a>>,
+        to: Option<Box<dyn Location + 'a>>,
+        from: Option<Box<dyn Location + 'a>>,
         content: Option<u8>,
         content_high: Option<u8>,
     ) -> Self {
@@ -407,11 +407,11 @@ impl<'a> Instruction<'a> {
     // To: storing at the provided location
     // If the operation happens in place, it is to and not from
 
-    pub fn new_to(operation: Operation, to: Box<Location + 'a>) -> Self {
+    pub fn new_to(operation: Operation, to: Box<dyn Location + 'a>) -> Self {
         Instruction::new(operation, Some(to), None, None, None)
     }
 
-    pub fn new_from(operation: Operation, from: Box<Location + 'a>) -> Self {
+    pub fn new_from(operation: Operation, from: Box<dyn Location + 'a>) -> Self {
         Instruction::new(operation, None, Some(from), None, None)
     }
 
@@ -419,15 +419,15 @@ impl<'a> Instruction<'a> {
         Instruction::new(operation, None, None, Some(content), None)
     }
 
-    pub fn new_to_from(operation: Operation, to: Box<Location + 'a>, from: Box<Location + 'a>) -> Self {
+    pub fn new_to_from(operation: Operation, to: Box<dyn Location + 'a>, from: Box<dyn Location + 'a>) -> Self {
         Instruction::new(operation, Some(to), Some(from), None, None)
     }
 
-    pub fn new_to_content(operation: Operation, to: Box<Location + 'a>, content: u8) -> Self {
+    pub fn new_to_content(operation: Operation, to: Box<dyn Location + 'a>, content: u8) -> Self {
         Instruction::new(operation, Some(to), None, Some(content), None)
     }
 
-    pub fn new_to_content16(operation: Operation, to: Box<Location + 'a>, content: u8, content_high: u8) -> Self {
+    pub fn new_to_content16(operation: Operation, to: Box<dyn Location + 'a>, content: u8, content_high: u8) -> Self {
         Instruction::new(operation, Some(to), None, Some(content), Some(content_high))
     }
 }
