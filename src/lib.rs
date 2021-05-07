@@ -152,6 +152,14 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
+    fn exchange_register_values(&mut self, register1: Register, register2: Register) {
+        let register1_value = self.get_register_value(register1);
+        let register2_value = self.get_register_value(register2);
+        self.set_register(register2, register1_value);
+        self.set_register(register1, register2_value);
+    }
+
+    #[cfg_attr(test, mutate)]
     fn is_bit_set(&self, value: u8, bit_index: u8) -> bool {
         if bit_index >= 8 {
             panic!("Invalid bit index of {}", bit_index);
@@ -191,6 +199,12 @@ fn mvi_instruction(state: &mut State, register: Register, data: u8) {
 fn mov_instruction(state: &mut State, from_register: Register, to_register: Register) {
     let from_register_value = state.get_register_value(from_register);
     mvi_instruction(state, to_register, from_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+fn xchg_instruction(state: &mut State) {
+    state.exchange_register_values(Register::D, Register::H);
+    state.exchange_register_values(Register::E, Register::L);
 }
 
 #[cfg_attr(test, mutate)]
@@ -482,6 +496,25 @@ mod tests {
                 Register::C => 218,
                 Register::E => 218,
                 Register::L => 218,
+            },
+            HashMap::new(),
+        );
+    }
+
+    #[test]
+    fn xchg_exchanges_content_of_registers() {
+        let mut state = State::with_initial_register_state(hashmap! {
+            Register::D => 205,
+            Register::E => 69,
+            Register::L => 11,
+        });
+        xchg_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! {
+                Register::H => 205,
+                Register::E => 11,
+                Register::L => 69,
             },
             HashMap::new(),
         );
