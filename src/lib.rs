@@ -165,8 +165,8 @@ impl State {
             panic!("Invalid bit index of {}", bit_index);
         }
 
-        let bit_mask = u8::pow(2, bit_index as u32);
-        value & bit_mask != 0
+        let shifted_value = value >> bit_index;
+        shifted_value & 0b00000001 != 0
     }
 
     #[cfg_attr(test, mutate)]
