@@ -338,6 +338,21 @@ fn xni_instruction(state: &mut State, data: u8) {
 }
 
 #[cfg_attr(test, mutate)]
+fn cmp_instruction(state: &mut State, register: Register) {
+    let accumulator_value = state.get_register_value(Register::A);
+    let register_value = state.get_register_value(register);
+    let (result, borrow) = accumulator_value.overflowing_sub(register_value);
+    state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = borrow;
+}
+
+#[cfg_attr(test, mutate)]
+fn cpi_instruction(state: &mut State, data: u8) {
+    // This seems wrong but from the docs looks to have the same behaviour
+    sui_instruction(state, data);
+}
+
+#[cfg_attr(test, mutate)]
 fn rlc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
     state.set_register(Register::A, accumulator_value.rotate_left(1));
@@ -1015,6 +1030,52 @@ mod tests {
             &state,
             RegisterState::new(),
             hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn cmp_sets_the_zero_flag_if_both_are_same() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 36, Register::H => 36 });
+        cmp_instruction(&mut state, Register::H);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 36, Register::H => 36 },
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn cmp_sets_the_carry_flag_if_register_value_is_greater() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 24, Register::E => 48 });
+        cmp_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 24, Register::E => 48 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        );
+    }
+
+    #[test]
+    fn cpi_sets_the_zero_flag_if_both_are_same() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 54 });
+        cpi_instruction(&mut state, 54);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn cpi_sets_the_carry_flag_if_register_value_is_greater() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 36 });
+        cpi_instruction(&mut state, 60);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 232 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
         );
     }
 
