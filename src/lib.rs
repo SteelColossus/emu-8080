@@ -256,6 +256,7 @@ fn ana_instruction(state: &mut State, source_register: Register) {
     );
     let result = state.get_register_value(Register::A);
     state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = false;
 }
 
 #[cfg_attr(test, mutate)]
@@ -265,6 +266,7 @@ fn ani_instruction(state: &mut State, data: u8) {
     });
     let result = state.get_register_value(Register::A);
     state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = false;
 }
 
 #[cfg_attr(test, mutate)]
@@ -310,13 +312,15 @@ fn xni_instruction(state: &mut State, data: u8) {
 #[cfg_attr(test, mutate)]
 fn rlc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
-    state.set_register(Register::A, accumulator_value << 1);
+    state.set_register(Register::A, accumulator_value.rotate_left(1));
+    state.condition_flags.carry = state.is_bit_set(accumulator_value, 7);
 }
 
 #[cfg_attr(test, mutate)]
 fn rrc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
-    state.set_register(Register::A, accumulator_value >> 1);
+    state.set_register(Register::A, accumulator_value.rotate_right(1));
+    state.condition_flags.carry = state.is_bit_set(accumulator_value, 0);
 }
 
 #[cfg_attr(test, mutate)]
@@ -766,6 +770,18 @@ mod tests {
     }
 
     #[test]
+    fn ana_clears_the_carry_flag() {
+        let mut state = State::default();
+        state.condition_flags.carry = true;
+        ana_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
     fn ani_logically_ands_the_accumulator_with_the_given_value() {
         let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b11000110 });
         ani_instruction(&mut state, 0b01100011);
@@ -773,6 +789,18 @@ mod tests {
             &state,
             hashmap! { Register::A => 0b01000010 },
             hashmap! { ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn ani_clears_the_carry_flag() {
+        let mut state = State::default();
+        state.condition_flags.carry = true;
+        ani_instruction(&mut state, 0b00000000);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
         );
     }
 
@@ -848,23 +876,45 @@ mod tests {
 
     #[test]
     fn rlc_shifts_the_accumulator_value_left() {
-        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b11000110 });
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b01100011 });
         rlc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
-            hashmap! { Register::A => 0b10001100 },
+            hashmap! { Register::A => 0b11000110 },
             HashMap::new(),
         );
     }
 
     #[test]
+    fn rlc_wraps_shifted_bit_and_sets_carry_flag() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b10000000 });
+        rlc_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 0b00000001 },
+            hashmap! { ConditionFlag::Carry => true },
+        );
+    }
+
+    #[test]
     fn rrc_shifts_the_accumulator_value_left() {
-        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b01100011 });
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b11000110 });
         rrc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
-            hashmap! { Register::A => 0b00110001 },
+            hashmap! { Register::A => 0b01100011 },
             HashMap::new(),
+        );
+    }
+
+    #[test]
+    fn rrc_wraps_shifted_bit_and_sets_carry_flag() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 0b00000001 });
+        rrc_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 0b10000000 },
+            hashmap! { ConditionFlag::Carry => true },
         );
     }
 
