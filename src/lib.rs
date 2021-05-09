@@ -129,33 +129,19 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn increase_register(
-        &mut self,
-        register: Register,
-        relative_value: u8,
-        should_set_carry_flag: bool,
-    ) {
+    fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
         *register_to_adjust = result;
-        if should_set_carry_flag {
-            self.condition_flags.carry = carry
-        }
+        carry
     }
 
     #[cfg_attr(test, mutate)]
-    fn decrease_register(
-        &mut self,
-        register: Register,
-        relative_value: u8,
-        should_set_carry_flag: bool,
-    ) {
+    fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
         *register_to_adjust = result;
-        if should_set_carry_flag {
-            self.condition_flags.carry = borrow
-        }
+        borrow
     }
 
     #[cfg_attr(test, mutate)]

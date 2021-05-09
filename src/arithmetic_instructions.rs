@@ -4,14 +4,14 @@ use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
 pub fn inr_instruction(state: &mut State, register: Register) {
-    state.increase_register(register, 1, false);
+    state.increase_register(register, 1);
     let result = state.get_register_value(register);
     state.set_condition_flags_based_on_result(result);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn dcr_instruction(state: &mut State, register: Register) {
-    state.decrease_register(register, 1, false);
+    state.decrease_register(register, 1);
     let result = state.get_register_value(register);
     state.set_condition_flags_based_on_result(result);
 }
@@ -24,9 +24,26 @@ pub fn add_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn adi_instruction(state: &mut State, data: u8) {
-    state.increase_register(Register::A, data, true);
+    let carry = state.increase_register(Register::A, data);
     let result = state.get_register_value(Register::A);
     state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = carry;
+}
+
+#[cfg_attr(test, mutate)]
+pub fn adc_instruction(state: &mut State, source_register: Register) {
+    let source_register_value = state.get_register_value(source_register);
+    aci_instruction(state, source_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn aci_instruction(state: &mut State, data: u8) {
+    let carry_value = if state.condition_flags.carry { 1 } else { 0 };
+    let mut carry = state.increase_register(Register::A, data);
+    carry |= state.increase_register(Register::A, carry_value);
+    let result = state.get_register_value(Register::A);
+    state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = carry;
 }
 
 #[cfg_attr(test, mutate)]
@@ -37,9 +54,26 @@ pub fn sub_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn sui_instruction(state: &mut State, data: u8) {
-    state.decrease_register(Register::A, data, true);
+    let borrow = state.decrease_register(Register::A, data);
     let result = state.get_register_value(Register::A);
     state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = borrow;
+}
+
+#[cfg_attr(test, mutate)]
+pub fn sbb_instruction(state: &mut State, source_register: Register) {
+    let source_register_value = state.get_register_value(source_register);
+    sbi_instruction(state, source_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn sbi_instruction(state: &mut State, data: u8) {
+    let carry_value = if state.condition_flags.carry { 1 } else { 0 };
+    let mut borrow = state.decrease_register(Register::A, data);
+    borrow |= state.decrease_register(Register::A, carry_value);
+    let result = state.get_register_value(Register::A);
+    state.set_condition_flags_based_on_result(result);
+    state.condition_flags.carry = borrow;
 }
 
 #[cfg(test)]
@@ -234,6 +268,108 @@ mod tests {
     }
 
     #[test]
+    fn adc_adds_the_register_value_to_accumulator_when_carry_flag_is_not_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 77, Register::B => 88 });
+        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 165, Register::B => 88 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn adc_adds_to_the_accumulator_the_register_value_and_carry_flag_when_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 77, Register::B => 88 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 166, Register::B => 88 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn adc_correctly_overflows_with_the_carry_flag_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 200, Register::B => 255 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 200, Register::B => 255 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn adc_correctly_overflows_as_a_result_of_the_carry_flag() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 224, Register::B => 31 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 0, Register::B => 31 },
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn aci_adds_the_given_value_to_accumulator_when_carry_flag_is_not_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 77 });
+        crate::arithmetic_instructions::aci_instruction(&mut state, 88);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 165 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn aci_adds_to_the_accumulator_the_given_value_and_carry_flag_when_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 77 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::aci_instruction(&mut state, 88);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 166 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn aci_correctly_overflows_with_the_carry_flag_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 200 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::aci_instruction(&mut state, 255);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 200 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn aci_correctly_overflows_as_a_result_of_the_carry_flag() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 224 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::aci_instruction(&mut state, 31);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 0 },
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
     fn sub_subtracts_the_existing_register_value_from_the_accumulator() {
         let mut state =
             State::with_initial_register_state(hashmap! { Register::A => 255, Register::D => 24 });
@@ -336,5 +472,107 @@ mod tests {
             hashmap! { Register::A => 231 },
             hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
         );
+    }
+
+    #[test]
+    fn sbb_subtracts_the_register_value_from_accumulator_when_carry_flag_is_not_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 88, Register::B => 77 });
+        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 11, Register::B => 77 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn sbb_subtracts_from_the_accumulator_the_register_value_and_carry_flag_when_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 88, Register::B => 77 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 10, Register::B => 77 },
+            hashmap! { ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn sbb_correctly_underflows_with_the_carry_flag_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 200, Register::B => 255 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 200, Register::B => 255 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn sbb_correctly_underflows_as_a_result_of_the_carry_flag() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 31, Register::B => 31 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 255, Register::B => 31 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn sbi_subtracts_the_given_value_from_accumulator_when_carry_flag_is_not_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 88 });
+        crate::arithmetic_instructions::sbi_instruction(&mut state, 77);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 11 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn sbi_subtracts_from_the_accumulator_the_given_value_and_carry_flag_when_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 88 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbi_instruction(&mut state, 77);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 10 },
+            hashmap! { ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn sbi_correctly_underflows_with_the_carry_flag_set() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 200 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbi_instruction(&mut state, 255);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 200 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
+        )
+    }
+
+    #[test]
+    fn sbi_correctly_underflows_as_a_result_of_the_carry_flag() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 31 });
+        state.condition_flags.carry = true;
+        crate::arithmetic_instructions::sbi_instruction(&mut state, 31);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 255 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        )
     }
 }
