@@ -18,7 +18,7 @@ fn assert_actual_equals_expected_for_type<T, V>(
     );
 }
 
-fn assert_register_has_value(register: Register, actual_value: u8, expected_value: u8) {
+fn assert_register_has_value(register: Register, actual_value: i8, expected_value: i8) {
     assert_actual_equals_expected_for_type("register", register, actual_value, expected_value);
 }
 

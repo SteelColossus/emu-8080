@@ -20,7 +20,7 @@ pub enum Register {
     L,
 }
 
-pub type RegisterState = HashMap<Register, u8>;
+pub type RegisterState = HashMap<Register, i8>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum ConditionFlag {
@@ -113,23 +113,23 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn get_register_mut(&mut self, register: Register) -> &mut u8 {
+    fn get_register_mut(&mut self, register: Register) -> &mut i8 {
         self.registers.get_mut(&register).unwrap()
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn get_register_value(&mut self, register: Register) -> u8 {
+    pub fn get_register_value(&mut self, register: Register) -> i8 {
         *self.registers.get(&register).unwrap()
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_register(&mut self, register: Register, value: u8) {
+    pub fn set_register(&mut self, register: Register, value: i8) {
         let register_to_set = self.get_register_mut(register);
         *register_to_set = value;
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn increase_register(&mut self, register: Register, relative_value: i8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
         *register_to_adjust = result;
@@ -137,7 +137,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn decrease_register(&mut self, register: Register, relative_value: i8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
         *register_to_adjust = result;
@@ -145,9 +145,13 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_register_by_function_with_value<F>(&mut self, target_register: Register, value: u8, f: F)
-    where
-        F: FnOnce(u8, u8) -> u8,
+    pub fn set_register_by_function_with_value<F>(
+        &mut self,
+        target_register: Register,
+        value: i8,
+        f: F,
+    ) where
+        F: FnOnce(i8, i8) -> i8,
     {
         let target_register_value = self.get_register_value(target_register);
         self.set_register(target_register, f(value, target_register_value));
@@ -162,7 +166,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn is_bit_set(&self, value: u8, bit_index: u8) -> bool {
+    pub fn is_bit_set(&self, value: i8, bit_index: u8) -> bool {
         if bit_index >= 8 {
             panic!("Invalid bit index of {}", bit_index);
         }
@@ -172,7 +176,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn get_value_with_bit_set(&self, value: u8, bit_index: u8, bit_flag: bool) -> u8 {
+    pub fn get_value_with_bit_set(&self, value: i8, bit_index: u8, bit_flag: bool) -> i8 {
         if bit_index >= 8 {
             panic!("Invalid bit index of {}", bit_index);
         }
@@ -183,7 +187,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn get_parity(&self, value: u8) -> bool {
+    fn get_parity(&self, value: i8) -> bool {
         let mut parity = true;
 
         for bit_index in 0..=7 {
@@ -196,7 +200,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_condition_flags_from_result(&mut self, result: u8) {
+    pub fn set_condition_flags_from_result(&mut self, result: i8) {
         self.condition_flags.zero = result == 0;
         self.condition_flags.sign = self.is_bit_set(result, 7);
         self.condition_flags.parity = self.get_parity(result);
@@ -244,13 +248,13 @@ mod tests {
     #[should_panic(expected = "Invalid bit index of 8")]
     fn is_bit_set_panics_when_given_an_invalid_bit_index() {
         let state = State::default();
-        state.is_bit_set(255, 8);
+        state.is_bit_set(127, 8);
     }
 
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
         let state = State::default();
-        state.get_value_with_bit_set(255, 8, true);
+        state.get_value_with_bit_set(127, 8, true);
     }
 }

@@ -9,7 +9,7 @@ pub fn ana_instruction(state: &mut State, source_register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn ani_instruction(state: &mut State, data: u8) {
+pub fn ani_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value & target_value
     });
@@ -24,7 +24,7 @@ pub fn ora_instruction(state: &mut State, source_register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn oni_instruction(state: &mut State, data: u8) {
+pub fn oni_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value | target_value
     });
@@ -39,7 +39,7 @@ pub fn xra_instruction(state: &mut State, source_register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn xni_instruction(state: &mut State, data: u8) {
+pub fn xni_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value ^ target_value
     });
@@ -51,15 +51,18 @@ pub fn xni_instruction(state: &mut State, data: u8) {
 pub fn cmp_instruction(state: &mut State, register: Register) {
     let accumulator_value = state.get_register_value(Register::A);
     let register_value = state.get_register_value(register);
-    let (result, borrow) = accumulator_value.overflowing_sub(register_value);
+    let result = accumulator_value.wrapping_sub(register_value);
     state.set_condition_flags_from_result(result);
-    state.condition_flags.carry = borrow;
+    state.condition_flags.carry = accumulator_value < register_value;
 }
 
 #[cfg_attr(test, mutate)]
-pub fn cpi_instruction(state: &mut State, data: u8) {
-    // This seems wrong but from the docs looks to have the same behaviour
-    crate::arithmetic_instructions::sui_instruction(state, data);
+pub fn cpi_instruction(state: &mut State, data: i8) {
+    let accumulator_value = state.get_register_value(Register::A);
+    let result = accumulator_value.wrapping_sub(data);
+    state.set_register(Register::A, result);
+    state.set_condition_flags_from_result(result);
+    state.condition_flags.carry = accumulator_value < data;
 }
 
 #[cfg_attr(test, mutate)]
@@ -117,6 +120,7 @@ pub fn stc_instruction(state: &mut State) {
 }
 
 #[cfg(test)]
+#[allow(overflowing_literals)]
 mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
     use crate::{ConditionFlag, Register, RegisterState, State};
@@ -341,7 +345,7 @@ mod tests {
         crate::logical_instructions::cpi_instruction(&mut state, 60);
         assert_state_is_as_expected(
             &state,
-            hashmap! { Register::A => 232 },
+            hashmap! { Register::A => -24 },
             hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
         );
     }

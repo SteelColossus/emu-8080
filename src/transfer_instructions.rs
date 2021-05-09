@@ -3,7 +3,7 @@ use crate::{Register, State};
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
-pub fn mvi_instruction(state: &mut State, register: Register, data: u8) {
+pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
     state.set_register(register, data);
 }
 
@@ -36,11 +36,11 @@ mod tests {
     #[test]
     fn mvi_loads_data_into_multiple_registers() {
         let mut state = State::default();
-        crate::transfer_instructions::mvi_instruction(&mut state, Register::B, 128);
-        crate::transfer_instructions::mvi_instruction(&mut state, Register::D, 255);
+        crate::transfer_instructions::mvi_instruction(&mut state, Register::B, 1);
+        crate::transfer_instructions::mvi_instruction(&mut state, Register::D, 127);
         assert_state_is_as_expected(
             &state,
-            hashmap! { Register::B => 128, Register::D => 255 },
+            hashmap! { Register::B => 1, Register::D => 127 },
             HashMap::new(),
         );
     }
@@ -65,17 +65,17 @@ mod tests {
 
     #[test]
     fn multiple_mov_can_move_to_multiple_registers() {
-        let mut state = State::with_initial_register_state(hashmap! { Register::A => 218 });
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 91 });
         crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::C);
         crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::E);
         crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::L);
         assert_state_is_as_expected(
             &state,
             hashmap! {
-                Register::A => 218,
-                Register::C => 218,
-                Register::E => 218,
-                Register::L => 218,
+                Register::A => 91,
+                Register::C => 91,
+                Register::E => 91,
+                Register::L => 91,
             },
             HashMap::new(),
         );
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn xchg_exchanges_content_of_registers() {
         let mut state = State::with_initial_register_state(hashmap! {
-            Register::D => 205,
+            Register::D => 78,
             Register::E => 69,
             Register::L => 11,
         });
@@ -92,7 +92,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             hashmap! {
-                Register::H => 205,
+                Register::H => 78,
                 Register::E => 11,
                 Register::L => 69,
             },
