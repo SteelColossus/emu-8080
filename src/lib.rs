@@ -118,18 +118,18 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn get_register_value(&mut self, register: Register) -> u8 {
+    pub fn get_register_value(&mut self, register: Register) -> u8 {
         *self.registers.get(&register).unwrap()
     }
 
     #[cfg_attr(test, mutate)]
-    fn set_register(&mut self, register: Register, value: u8) {
+    pub fn set_register(&mut self, register: Register, value: u8) {
         let register_to_set = self.get_register_mut(register);
         *register_to_set = value;
     }
 
     #[cfg_attr(test, mutate)]
-    fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
         *register_to_adjust = result;
@@ -137,7 +137,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
         *register_to_adjust = result;
@@ -145,29 +145,16 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn set_register_by_function_with_value<F>(&mut self, target_register: Register, value: u8, f: F)
+    pub fn set_register_by_function_with_value<F>(&mut self, target_register: Register, value: u8, f: F)
     where
         F: FnOnce(u8, u8) -> u8,
     {
         let target_register_value = self.get_register_value(target_register);
-        self.set_register(target_register, f(target_register_value, value));
+        self.set_register(target_register, f(value, target_register_value));
     }
 
     #[cfg_attr(test, mutate)]
-    fn set_register_by_function_with_register<F>(
-        &mut self,
-        source_register: Register,
-        target_register: Register,
-        f: F,
-    ) where
-        F: FnOnce(u8, u8) -> u8,
-    {
-        let source_register_value = self.get_register_value(source_register);
-        self.set_register_by_function_with_value(target_register, source_register_value, f);
-    }
-
-    #[cfg_attr(test, mutate)]
-    fn exchange_register_values(&mut self, register1: Register, register2: Register) {
+    pub fn exchange_register_values(&mut self, register1: Register, register2: Register) {
         let register1_value = self.get_register_value(register1);
         let register2_value = self.get_register_value(register2);
         self.set_register(register2, register1_value);
@@ -198,10 +185,16 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn set_condition_flags_based_on_result(&mut self, result: u8) {
+    pub fn set_condition_flags_from_result(&mut self, result: u8) {
         self.condition_flags.zero = result == 0;
         self.condition_flags.sign = self.is_bit_set(result, 7);
         self.condition_flags.parity = self.get_parity(result);
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
+        let register_value = self.get_register_value(register);
+        self.set_condition_flags_from_result(register_value);
     }
 }
 

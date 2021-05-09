@@ -5,15 +5,13 @@ use mutagen::mutate;
 #[cfg_attr(test, mutate)]
 pub fn inr_instruction(state: &mut State, register: Register) {
     state.increase_register(register, 1);
-    let result = state.get_register_value(register);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(register);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn dcr_instruction(state: &mut State, register: Register) {
     state.decrease_register(register, 1);
-    let result = state.get_register_value(register);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(register);
 }
 
 #[cfg_attr(test, mutate)]
@@ -25,8 +23,7 @@ pub fn add_instruction(state: &mut State, source_register: Register) {
 #[cfg_attr(test, mutate)]
 pub fn adi_instruction(state: &mut State, data: u8) {
     let carry = state.increase_register(Register::A, data);
-    let result = state.get_register_value(Register::A);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = carry;
 }
 
@@ -41,8 +38,7 @@ pub fn aci_instruction(state: &mut State, data: u8) {
     let carry_value = if state.condition_flags.carry { 1 } else { 0 };
     let mut carry = state.increase_register(Register::A, data);
     carry |= state.increase_register(Register::A, carry_value);
-    let result = state.get_register_value(Register::A);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = carry;
 }
 
@@ -55,8 +51,7 @@ pub fn sub_instruction(state: &mut State, source_register: Register) {
 #[cfg_attr(test, mutate)]
 pub fn sui_instruction(state: &mut State, data: u8) {
     let borrow = state.decrease_register(Register::A, data);
-    let result = state.get_register_value(Register::A);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = borrow;
 }
 
@@ -71,8 +66,7 @@ pub fn sbi_instruction(state: &mut State, data: u8) {
     let carry_value = if state.condition_flags.carry { 1 } else { 0 };
     let mut borrow = state.decrease_register(Register::A, data);
     borrow |= state.decrease_register(Register::A, carry_value);
-    let result = state.get_register_value(Register::A);
-    state.set_condition_flags_based_on_result(result);
+    state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = borrow;
 }
 
