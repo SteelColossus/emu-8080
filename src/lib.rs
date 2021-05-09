@@ -172,6 +172,17 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
+    pub fn get_value_with_bit_set(&self, value: u8, bit_index: u8, bit_flag: bool) -> u8 {
+        if bit_index >= 8 {
+            panic!("Invalid bit index of {}", bit_index);
+        }
+
+        let bit_mask = 1 << bit_index;
+        let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
+        value & !bit_mask | bit_value_mask
+    }
+
+    #[cfg_attr(test, mutate)]
     fn get_parity(&self, value: u8) -> bool {
         let mut parity = true;
 
@@ -234,5 +245,12 @@ mod tests {
     fn is_bit_set_panics_when_given_an_invalid_bit_index() {
         let state = State::default();
         state.is_bit_set(255, 8);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid bit index of 8")]
+    fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
+        let state = State::default();
+        state.get_value_with_bit_set(255, 8, true);
     }
 }
