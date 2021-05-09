@@ -1,12 +1,13 @@
 pub mod arithmetic_instructions;
+#[cfg(test)]
+pub mod base_test_functions;
 pub mod logical_instructions;
 pub mod transfer_instructions;
-
-use std::collections::HashMap;
 
 use maplit::hashmap;
 #[cfg(test)]
 use mutagen::mutate;
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Register {
@@ -215,5 +216,44 @@ impl State {
         self.condition_flags.zero = result == 0;
         self.condition_flags.sign = self.is_bit_set(result, 7);
         self.condition_flags.parity = self.get_parity(result);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::base_test_functions::assert_state_is_as_expected;
+    use crate::{Register, RegisterState, State};
+    use maplit::hashmap;
+    use std::collections::HashMap;
+
+    #[test]
+    fn can_get_state_of_all_registers() {
+        let state = State::default();
+        let register_state = state.get_register_state();
+        assert_eq!(register_state.len(), 7);
+    }
+
+    #[test]
+    fn default_register_state_has_all_default_values() {
+        let state = State::default();
+        assert_state_is_as_expected(&state, RegisterState::new(), HashMap::new());
+    }
+
+    #[test]
+    fn can_create_state_with_initial_register_values() {
+        let state =
+            State::with_initial_register_state(hashmap! { Register::A => 23, Register::C => 34 });
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 23, Register::C => 34 },
+            HashMap::new(),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid bit index of 8")]
+    fn is_bit_set_panics_when_given_an_invalid_bit_index() {
+        let state = State::default();
+        state.is_bit_set(255, 8);
     }
 }

@@ -41,3 +41,300 @@ pub fn sui_instruction(state: &mut State, data: u8) {
     let result = state.get_register_value(Register::A);
     state.set_condition_flags_based_on_result(result);
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::base_test_functions::assert_state_is_as_expected;
+    use crate::{ConditionFlag, Register, RegisterState, State};
+    use maplit::hashmap;
+    use std::collections::HashMap;
+
+    #[test]
+    fn inr_increments_default_register_value() {
+        let mut state = State::default();
+        crate::arithmetic_instructions::inr_instruction(&mut state, Register::C);
+        assert_state_is_as_expected(&state, hashmap! { Register::C => 1 }, HashMap::new());
+    }
+
+    #[test]
+    fn inr_increments_existing_register_value() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::E => 127 });
+        crate::arithmetic_instructions::inr_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::E => 128 },
+            hashmap! { ConditionFlag::Sign => true },
+        );
+    }
+
+    #[test]
+    fn inr_does_not_set_carry_flag_when_overflowing() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::C => 255 });
+        crate::arithmetic_instructions::inr_instruction(&mut state, Register::C);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::C => 0 },
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn dcr_decrements_default_register_value_and_does_not_set_carry_flag_when_underflowing() {
+        let mut state = State::default();
+        crate::arithmetic_instructions::dcr_instruction(&mut state, Register::C);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::C => 255 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn dcr_decrements_existing_register_value() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::E => 127 });
+        crate::arithmetic_instructions::dcr_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::E => 126 },
+            hashmap! { ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn add_adds_the_existing_register_value_to_the_accumulator() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::D => 24 });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::D);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::D => 24, Register::A => 24 },
+            hashmap! { ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn add_can_add_a_value_to_the_accumulator_multiple_times() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::B => 31 });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::B => 31, Register::A => 93 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn add_can_add_values_from_multiple_different_registers() {
+        let mut state = State::with_initial_register_state(hashmap! {
+            Register::B => 11,
+            Register::C => 13,
+            Register::D => 15,
+        });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::C);
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::D);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! {
+                Register::B => 11,
+                Register::C => 13,
+                Register::D => 15,
+                Register::A => 39,
+            },
+            hashmap! { ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn add_adds_the_value_onto_any_existing_value_in_the_accumulator() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 102, Register::E => 95 });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::E => 95, Register::A => 197 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn add_doubles_the_accumulator_value_if_it_is_given_as_the_register() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 63 });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 252 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn add_sets_condition_flag_zero_to_true_if_result_is_zero() {
+        let mut state = State::default();
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn add_sets_the_carry_flag_when_overflowing() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 156, Register::E => 183 });
+        crate::arithmetic_instructions::add_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::E => 183, Register::A => 83 },
+            hashmap! { ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        );
+    }
+
+    #[test]
+    fn adi_adds_the_given_value_onto_the_default_accumulator_value() {
+        let mut state = State::default();
+        crate::arithmetic_instructions::adi_instruction(&mut state, 128);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 128 },
+            hashmap! { ConditionFlag::Sign => true },
+        );
+    }
+
+    #[test]
+    fn adi_adds_the_given_value_onto_any_existing_value_in_the_accumulator() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 90 });
+        crate::arithmetic_instructions::adi_instruction(&mut state, 37);
+        assert_state_is_as_expected(&state, hashmap! { Register::A => 127 }, HashMap::new());
+    }
+
+    #[test]
+    fn adi_sets_condition_flag_zero_to_true_if_result_is_zero() {
+        let mut state = State::default();
+        crate::arithmetic_instructions::adi_instruction(&mut state, 0);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn adi_sets_the_carry_flag_when_overflowing() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 174 });
+        crate::arithmetic_instructions::adi_instruction(&mut state, 149);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 67 },
+            hashmap! { ConditionFlag::Carry => true },
+        );
+    }
+
+    #[test]
+    fn sub_subtracts_the_existing_register_value_from_the_accumulator() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 255, Register::D => 24 });
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::D);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::D => 24, Register::A => 231 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn sub_can_subtract_a_value_from_the_accumulator_multiple_times() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 253, Register::B => 42 });
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::B => 42, Register::A => 127 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn sub_can_subtract_values_from_multiple_different_registers() {
+        let mut state = State::with_initial_register_state(hashmap! {
+            Register::A => 255,
+            Register::B => 11,
+            Register::C => 13,
+            Register::D => 15,
+        });
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::C);
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::D);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! {
+                Register::B => 11,
+                Register::C => 13,
+                Register::D => 15,
+                Register::A => 216,
+            },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+        )
+    }
+
+    #[test]
+    fn sub_zeroes_the_accumulator_value_if_it_is_given_as_the_register() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 63 });
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 0 },
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn sub_sets_the_carry_flag_when_underflowing() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::A => 156, Register::E => 183 });
+        crate::arithmetic_instructions::sub_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::E => 183, Register::A => 229 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
+        );
+    }
+
+    #[test]
+    fn sui_subtracts_the_given_value_from_any_existing_value_in_the_accumulator() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 183 });
+        crate::arithmetic_instructions::sui_instruction(&mut state, 55);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 128 },
+            hashmap! { ConditionFlag::Sign => true },
+        );
+    }
+
+    #[test]
+    fn sui_sets_condition_flag_zero_to_true_if_result_is_zero() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 173 });
+        crate::arithmetic_instructions::sui_instruction(&mut state, 173);
+        assert_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+        );
+    }
+
+    #[test]
+    fn sui_sets_the_carry_flag_when_underflowing() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => 149 });
+        crate::arithmetic_instructions::sui_instruction(&mut state, 174);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::A => 231 },
+            hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+        );
+    }
+}
