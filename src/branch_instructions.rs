@@ -1,4 +1,4 @@
-use crate::{ConditionFlag, State};
+use crate::{ConditionFlag, Register, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -23,12 +23,19 @@ pub fn jcond_instruction(
     }
 }
 
+#[cfg_attr(test, mutate)]
+pub fn pchl_instruction(state: &mut State) {
+    let h_register_value = state.get_register_value(Register::H) as u8;
+    let l_register_value = state.get_register_value(Register::L) as u8;
+    state.program_counter = state.concat_high_low_bytes(h_register_value, l_register_value);
+}
+
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::{
         assert_full_state_is_as_expected, assert_state_is_as_expected,
     };
-    use crate::{ConditionFlag, RegisterState, State};
+    use crate::{ConditionFlag, Register, RegisterState, State};
     use maplit::hashmap;
     use std::collections::HashMap;
 
@@ -82,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic("The auxiliary carry flag is not a supported condition for JMP")]
+    #[should_panic(expected = "The auxiliary carry flag is not a supported condition for JMP")]
     fn jcond_does_not_support_auxiliary_carry_as_condition() {
         let mut state = State::default();
         state.condition_flags.auxiliary_carry = true;
@@ -91,6 +98,19 @@ mod tests {
             0xF0,
             0x0D,
             (ConditionFlag::AuxiliaryCarry, true),
+        );
+    }
+
+    #[test]
+    fn pchl_sets_the_program_counter_from_registers() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::H => -64, Register::L => 63 });
+        crate::branch_instructions::pchl_instruction(&mut state);
+        assert_full_state_is_as_expected(
+            &state,
+            hashmap! { Register::H => -64, Register::L => 63 },
+            HashMap::new(),
+            0xC03F,
         );
     }
 }
