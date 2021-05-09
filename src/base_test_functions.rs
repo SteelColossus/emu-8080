@@ -63,11 +63,30 @@ fn assert_values_of_condition_flags(state: &State, expected_flags: HashMap<Condi
     }
 }
 
+fn assert_program_counter_has_value(state: &State, expected_value: u16) {
+    let actual_value = state.program_counter;
+    assert_eq!(
+        actual_value, expected_value,
+        "Expected program counter to have value {:#X}, but instead it had value {:#X}",
+        expected_value, actual_value
+    );
+}
+
+pub fn assert_full_state_is_as_expected(
+    state: &State,
+    expected_register_state: RegisterState,
+    expected_flags: HashMap<ConditionFlag, bool>,
+    expected_program_counter: u16,
+) {
+    assert_values_of_registers(state, expected_register_state);
+    assert_values_of_condition_flags(state, expected_flags);
+    assert_program_counter_has_value(state, expected_program_counter);
+}
+
 pub fn assert_state_is_as_expected(
     state: &State,
     expected_register_state: RegisterState,
     expected_flags: HashMap<ConditionFlag, bool>,
 ) {
-    assert_values_of_registers(state, expected_register_state);
-    assert_values_of_condition_flags(state, expected_flags);
+    assert_full_state_is_as_expected(state, expected_register_state, expected_flags, 0x0000);
 }

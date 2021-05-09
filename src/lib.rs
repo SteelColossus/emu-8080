@@ -1,6 +1,7 @@
 pub mod arithmetic_instructions;
 #[cfg(test)]
 pub mod base_test_functions;
+pub mod branch_instructions;
 pub mod logical_instructions;
 pub mod transfer_instructions;
 
@@ -55,6 +56,7 @@ impl ConditionFlags {
 pub struct State {
     registers: RegisterState,
     pub condition_flags: ConditionFlags,
+    pub program_counter: u16,
 }
 
 impl State {
@@ -71,6 +73,7 @@ impl State {
                 Register::L => 0,
             },
             condition_flags: ConditionFlags::default(),
+            program_counter: 0x0000,
         }
     }
 
@@ -211,6 +214,11 @@ impl State {
         let register_value = self.get_register_value(register);
         self.set_condition_flags_from_result(register_value);
     }
+
+    #[cfg_attr(test, mutate)]
+    pub fn concat_high_low_bytes(&mut self, high_byte: u8, low_byte: u8) -> u16 {
+        u16::from(high_byte) << 8 | u16::from(low_byte)
+    }
 }
 
 #[cfg(test)]
@@ -228,7 +236,7 @@ mod tests {
     }
 
     #[test]
-    fn default_register_state_has_all_default_values() {
+    fn default_state_has_all_default_values() {
         let state = State::default();
         assert_state_is_as_expected(&state, RegisterState::new(), HashMap::new());
     }
