@@ -27,7 +27,8 @@ pub fn jcond_instruction(
 pub fn pchl_instruction(state: &mut State) {
     let h_register_value = state.get_register_value(Register::H) as u8;
     let l_register_value = state.get_register_value(Register::L) as u8;
-    state.program_counter = crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    state.program_counter =
+        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
 }
 
 #[cfg(test)]
@@ -43,7 +44,13 @@ mod tests {
     fn jmp_sets_the_program_counter_to_the_given_value() {
         let mut state = State::default();
         crate::branch_instructions::jmp_instruction(&mut state, 0x0D, 0xD0);
-        assert_full_state_is_as_expected(&state, RegisterState::new(), HashMap::new(), 0xD00D);
+        assert_full_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            HashMap::new(),
+            0xD00D,
+            0x0000,
+        );
     }
 
     #[test]
@@ -55,7 +62,13 @@ mod tests {
             0xFF,
             (ConditionFlag::Zero, false),
         );
-        assert_full_state_is_as_expected(&state, RegisterState::new(), HashMap::new(), 0xFFFF);
+        assert_full_state_is_as_expected(
+            &state,
+            RegisterState::new(),
+            HashMap::new(),
+            0xFFFF,
+            0x0000,
+        );
     }
 
     #[test]
@@ -85,6 +98,7 @@ mod tests {
             RegisterState::new(),
             hashmap! { ConditionFlag::Carry => true },
             0x000F,
+            0x0000,
         );
     }
 
@@ -111,6 +125,7 @@ mod tests {
             hashmap! { Register::H => -64, Register::L => 63 },
             HashMap::new(),
             0xC03F,
+            0x0000,
         );
     }
 }

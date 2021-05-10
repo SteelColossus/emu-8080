@@ -3,6 +3,7 @@ pub mod arithmetic_instructions;
 pub mod base_test_functions;
 pub mod branch_instructions;
 pub mod logical_instructions;
+pub mod stack_instructions;
 pub mod transfer_instructions;
 
 use maplit::hashmap;
@@ -103,6 +104,7 @@ pub struct State {
     registers: RegisterState,
     pub condition_flags: ConditionFlags,
     pub program_counter: u16,
+    pub stack_pointer: u16,
     memory: [u8; MEMORY_SIZE],
 }
 
@@ -121,6 +123,7 @@ impl State {
             },
             condition_flags: ConditionFlags::default(),
             program_counter: 0x0000,
+            stack_pointer: 0x0000,
             memory: [0; MEMORY_SIZE],
         }
     }

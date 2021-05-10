@@ -67,7 +67,16 @@ fn assert_program_counter_has_value(state: &State, expected_value: u16) {
     let actual_value = state.program_counter;
     assert_eq!(
         actual_value, expected_value,
-        "Expected program counter to have value {:#X}, but instead it had value {:#X}",
+        "Expected program counter to have value {:#06X}, but instead it had value {:#06X}",
+        expected_value, actual_value
+    );
+}
+
+fn assert_stack_pointer_has_value(state: &State, expected_value: u16) {
+    let actual_value = state.stack_pointer;
+    assert_eq!(
+        actual_value, expected_value,
+        "Expected stack pointer to have value {:#06X}, but instead it had value {:#06X}",
         expected_value, actual_value
     );
 }
@@ -90,10 +99,12 @@ pub fn assert_full_state_is_as_expected(
     expected_register_state: RegisterState,
     expected_flags: HashMap<ConditionFlag, bool>,
     expected_program_counter: u16,
+    expected_stack_pointer: u16,
 ) {
     assert_values_of_registers(state, expected_register_state);
     assert_values_of_condition_flags(state, expected_flags);
     assert_program_counter_has_value(state, expected_program_counter);
+    assert_stack_pointer_has_value(state, expected_stack_pointer);
 }
 
 pub fn assert_state_is_as_expected(
@@ -101,5 +112,11 @@ pub fn assert_state_is_as_expected(
     expected_register_state: RegisterState,
     expected_flags: HashMap<ConditionFlag, bool>,
 ) {
-    assert_full_state_is_as_expected(state, expected_register_state, expected_flags, 0x0000);
+    assert_full_state_is_as_expected(
+        state,
+        expected_register_state,
+        expected_flags,
+        0x0000,
+        0x0000,
+    );
 }
