@@ -4,7 +4,7 @@ use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
 pub fn jmp_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    state.program_counter = state.concat_low_high_bytes(low_data, high_data);
+    state.program_counter = State::concat_low_high_bytes(low_data, high_data);
 }
 
 #[cfg_attr(test, mutate)]
@@ -19,7 +19,7 @@ pub fn jcond_instruction(
     }
 
     if state.get_condition_flag_value(condition.0) == condition.1 {
-        state.program_counter = state.concat_low_high_bytes(low_data, high_data);
+        state.program_counter = State::concat_low_high_bytes(low_data, high_data);
     }
 }
 
@@ -27,7 +27,7 @@ pub fn jcond_instruction(
 pub fn pchl_instruction(state: &mut State) {
     let h_register_value = state.get_register_value(Register::H) as u8;
     let l_register_value = state.get_register_value(Register::L) as u8;
-    state.program_counter = state.concat_low_high_bytes(l_register_value, h_register_value);
+    state.program_counter = State::concat_low_high_bytes(l_register_value, h_register_value);
 }
 
 #[cfg(test)]

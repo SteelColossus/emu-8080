@@ -15,7 +15,7 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 
 #[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let memory_address = state.concat_low_high_bytes(low_data, high_data);
+    let memory_address = State::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.get_register_value(Register::A);
     state.set_value_at_memory_location(memory_address, accumulator_value as u8);
 }

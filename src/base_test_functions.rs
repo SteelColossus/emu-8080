@@ -91,7 +91,7 @@ pub fn assert_low_high_memory_location_contains_value(
     high_memory_address: u8,
     expected_value: u8,
 ) {
-    let memory_address = state.concat_low_high_bytes(low_memory_address, high_memory_address);
+    let memory_address = State::concat_low_high_bytes(low_memory_address, high_memory_address);
     assert_memory_location_contains_value(state, memory_address, expected_value);
 }
 
