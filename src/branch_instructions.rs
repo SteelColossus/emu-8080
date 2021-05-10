@@ -3,15 +3,15 @@ use crate::{ConditionFlag, Register, State};
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
-pub fn jmp_instruction(state: &mut State, high_data: u8, low_data: u8) {
-    state.program_counter = state.concat_high_low_bytes(high_data, low_data);
+pub fn jmp_instruction(state: &mut State, low_data: u8, high_data: u8) {
+    state.program_counter = state.concat_low_high_bytes(low_data, high_data);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn jcond_instruction(
     state: &mut State,
-    high_data: u8,
     low_data: u8,
+    high_data: u8,
     condition: (ConditionFlag, bool),
 ) {
     if condition.0 == ConditionFlag::AuxiliaryCarry {
@@ -19,7 +19,7 @@ pub fn jcond_instruction(
     }
 
     if state.get_condition_flag_value(condition.0) == condition.1 {
-        state.program_counter = state.concat_high_low_bytes(high_data, low_data);
+        state.program_counter = state.concat_low_high_bytes(low_data, high_data);
     }
 }
 
@@ -27,7 +27,7 @@ pub fn jcond_instruction(
 pub fn pchl_instruction(state: &mut State) {
     let h_register_value = state.get_register_value(Register::H) as u8;
     let l_register_value = state.get_register_value(Register::L) as u8;
-    state.program_counter = state.concat_high_low_bytes(h_register_value, l_register_value);
+    state.program_counter = state.concat_low_high_bytes(l_register_value, h_register_value);
 }
 
 #[cfg(test)]
@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn jmp_sets_the_program_counter_to_the_given_value() {
         let mut state = State::default();
-        crate::branch_instructions::jmp_instruction(&mut state, 0xD0, 0x0D);
+        crate::branch_instructions::jmp_instruction(&mut state, 0x0D, 0xD0);
         assert_full_state_is_as_expected(&state, RegisterState::new(), HashMap::new(), 0xD00D);
     }
 
@@ -76,8 +76,8 @@ mod tests {
         state.condition_flags.carry = true;
         crate::branch_instructions::jcond_instruction(
             &mut state,
-            0x00,
             0x0F,
+            0x00,
             (ConditionFlag::Carry, true),
         );
         assert_full_state_is_as_expected(
@@ -95,8 +95,8 @@ mod tests {
         state.condition_flags.auxiliary_carry = true;
         crate::branch_instructions::jcond_instruction(
             &mut state,
-            0xF0,
             0x0D,
+            0xF0,
             (ConditionFlag::AuxiliaryCarry, true),
         );
     }

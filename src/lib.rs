@@ -121,7 +121,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn get_register_value(&mut self, register: Register) -> i8 {
+    pub fn get_register_value(&self, register: Register) -> i8 {
         *self.registers.get(&register).unwrap()
     }
 
@@ -216,7 +216,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn concat_high_low_bytes(&mut self, high_byte: u8, low_byte: u8) -> u16 {
+    pub fn concat_low_high_bytes(&self, low_byte: u8, high_byte: u8) -> u16 {
         u16::from(high_byte) << 8 | u16::from(low_byte)
     }
 }
