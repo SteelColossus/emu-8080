@@ -69,14 +69,14 @@ pub fn cpi_instruction(state: &mut State, data: i8) {
 pub fn rlc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
     state.set_register(Register::A, accumulator_value.rotate_left(1));
-    state.condition_flags.carry = State::is_bit_set(accumulator_value, 7);
+    state.condition_flags.carry = crate::bit_operations::is_bit_set(accumulator_value, 7);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn rrc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
     state.set_register(Register::A, accumulator_value.rotate_right(1));
-    state.condition_flags.carry = State::is_bit_set(accumulator_value, 0);
+    state.condition_flags.carry = crate::bit_operations::is_bit_set(accumulator_value, 0);
 }
 
 #[cfg_attr(test, mutate)]
@@ -85,8 +85,8 @@ pub fn ral_instruction(state: &mut State) {
     let previous_carry = state.condition_flags.carry;
     let mut result = accumulator_value.rotate_left(1);
     let bit_index = 0;
-    let carry = State::is_bit_set(result, bit_index);
-    result = State::get_value_with_bit_set(result, bit_index, previous_carry);
+    let carry = crate::bit_operations::is_bit_set(result, bit_index);
+    result = crate::bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }
@@ -97,8 +97,8 @@ pub fn rar_instruction(state: &mut State) {
     let previous_carry = state.condition_flags.carry;
     let mut result = accumulator_value.rotate_right(1);
     let bit_index = 7;
-    let carry = State::is_bit_set(result, bit_index);
-    result = State::get_value_with_bit_set(result, bit_index, previous_carry);
+    let carry = crate::bit_operations::is_bit_set(result, bit_index);
+    result = crate::bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }

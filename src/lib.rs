@@ -10,6 +10,50 @@ use maplit::hashmap;
 use mutagen::mutate;
 use std::collections::HashMap;
 
+pub mod bit_operations {
+    #[cfg(test)]
+    use mutagen::mutate;
+
+    #[cfg_attr(test, mutate)]
+    pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
+        if bit_index >= 8 {
+            panic!("Invalid bit index of {}", bit_index);
+        }
+
+        let shifted_value = value >> bit_index;
+        shifted_value & 0b00000001 != 0
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_value_with_bit_set(value: i8, bit_index: u8, bit_flag: bool) -> i8 {
+        if bit_index >= 8 {
+            panic!("Invalid bit index of {}", bit_index);
+        }
+
+        let bit_mask = 1 << bit_index;
+        let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
+        value & !bit_mask | bit_value_mask
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_parity(value: i8) -> bool {
+        let mut parity = true;
+
+        for bit_index in 0..=7 {
+            if is_bit_set(value, bit_index) {
+                parity = !parity
+            }
+        }
+
+        parity
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
+        u16::from(high_byte) << 8 | u16::from(low_byte)
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Register {
     A,
@@ -185,53 +229,14 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn set_condition_flags_from_result(&mut self, result: i8) {
         self.condition_flags.zero = result == 0;
-        self.condition_flags.sign = State::is_bit_set(result, 7);
-        self.condition_flags.parity = State::get_parity(result);
+        self.condition_flags.sign = bit_operations::is_bit_set(result, 7);
+        self.condition_flags.parity = bit_operations::get_parity(result);
     }
 
     #[cfg_attr(test, mutate)]
     pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
         let register_value = self.get_register_value(register);
         self.set_condition_flags_from_result(register_value);
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
-        if bit_index >= 8 {
-            panic!("Invalid bit index of {}", bit_index);
-        }
-
-        let shifted_value = value >> bit_index;
-        shifted_value & 0b00000001 != 0
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn get_value_with_bit_set(value: i8, bit_index: u8, bit_flag: bool) -> i8 {
-        if bit_index >= 8 {
-            panic!("Invalid bit index of {}", bit_index);
-        }
-
-        let bit_mask = 1 << bit_index;
-        let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
-        value & !bit_mask | bit_value_mask
-    }
-
-    #[cfg_attr(test, mutate)]
-    fn get_parity(value: i8) -> bool {
-        let mut parity = true;
-
-        for bit_index in 0..=7 {
-            if State::is_bit_set(value, bit_index) {
-                parity = !parity
-            }
-        }
-
-        parity
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
-        u16::from(high_byte) << 8 | u16::from(low_byte)
     }
 }
 
@@ -274,12 +279,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn is_bit_set_panics_when_given_an_invalid_bit_index() {
-        State::is_bit_set(127, 8);
+        crate::bit_operations::is_bit_set(127, 8);
     }
 
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
-        State::get_value_with_bit_set(127, 8, true);
+        crate::bit_operations::get_value_with_bit_set(127, 8, true);
     }
 }

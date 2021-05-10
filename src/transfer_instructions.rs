@@ -15,21 +15,21 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 
 #[cfg_attr(test, mutate)]
 pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
     let memory_location_value = state.get_value_at_memory_location(memory_address);
     state.set_register(Register::A, memory_location_value as i8);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.get_register_value(Register::A);
     state.set_value_at_memory_location(memory_address, accumulator_value as u8);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let first_memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let first_memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
     let first_memory_value = state.get_value_at_memory_location(first_memory_address);
     let second_memory_value = state.get_value_at_memory_location(second_memory_address);
@@ -39,7 +39,7 @@ pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let first_memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let first_memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
     let h_register_value = state.get_register_value(Register::H) as u8;
     let l_register_value = state.get_register_value(Register::L) as u8;
