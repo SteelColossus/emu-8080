@@ -274,14 +274,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn is_bit_set_panics_when_given_an_invalid_bit_index() {
-        let state = State::default();
         State::is_bit_set(127, 8);
     }
 
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
-        let state = State::default();
         State::get_value_with_bit_set(127, 8, true);
     }
 }
