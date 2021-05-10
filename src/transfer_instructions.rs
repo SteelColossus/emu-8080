@@ -14,6 +14,13 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 }
 
 #[cfg_attr(test, mutate)]
+pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
+    let memory_address = state.concat_low_high_bytes(low_data, high_data);
+    let accumulator_value = state.get_register_value(Register::A);
+    state.set_value_at_memory_location(memory_address, accumulator_value as u8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn xchg_instruction(state: &mut State) {
     state.exchange_register_values(Register::D, Register::H);
     state.exchange_register_values(Register::E, Register::L);
@@ -21,7 +28,9 @@ pub fn xchg_instruction(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
-    use crate::base_test_functions::assert_state_is_as_expected;
+    use crate::base_test_functions::{
+        assert_low_high_memory_location_contains_value, assert_state_is_as_expected,
+    };
     use crate::{Register, State};
     use maplit::hashmap;
     use std::collections::HashMap;
@@ -79,6 +88,15 @@ mod tests {
             },
             HashMap::new(),
         );
+    }
+
+    #[test]
+    fn sta_stores_the_accumulator_value_into_the_given_memory_address() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => -42 });
+        let (low_data, high_data) = (0x99, 0x01);
+        crate::transfer_instructions::sta_instruction(&mut state, low_data, high_data);
+        assert_state_is_as_expected(&state, hashmap! { Register::A => -42 }, HashMap::new());
+        assert_low_high_memory_location_contains_value(&state, low_data, high_data, 214);
     }
 
     #[test]

@@ -53,10 +53,13 @@ impl ConditionFlags {
     }
 }
 
+const MEMORY_SIZE: usize = u16::MAX as usize + 1;
+
 pub struct State {
     registers: RegisterState,
     pub condition_flags: ConditionFlags,
     pub program_counter: u16,
+    memory: [u8; MEMORY_SIZE],
 }
 
 impl State {
@@ -74,6 +77,7 @@ impl State {
             },
             condition_flags: ConditionFlags::default(),
             program_counter: 0x0000,
+            memory: [0; MEMORY_SIZE],
         }
     }
 
@@ -129,6 +133,16 @@ impl State {
     pub fn set_register(&mut self, register: Register, value: i8) {
         let register_to_set = self.get_register_mut(register);
         *register_to_set = value;
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_value_at_memory_location(&self, memory_address: u16) -> u8 {
+        self.memory[memory_address as usize]
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_value_at_memory_location(&mut self, memory_address: u16, value: u8) {
+        self.memory[memory_address as usize] = value;
     }
 
     #[cfg_attr(test, mutate)]
@@ -223,8 +237,10 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{Register, RegisterState, State};
+    use crate::base_test_functions::{
+        assert_memory_location_contains_value, assert_state_is_as_expected,
+    };
+    use crate::{Register, RegisterState, State, MEMORY_SIZE};
     use maplit::hashmap;
     use std::collections::HashMap;
 
@@ -239,6 +255,9 @@ mod tests {
     fn default_state_has_all_default_values() {
         let state = State::default();
         assert_state_is_as_expected(&state, RegisterState::new(), HashMap::new());
+        for memory_address in 0..MEMORY_SIZE {
+            assert_memory_location_contains_value(&state, memory_address as u16, 0);
+        }
     }
 
     #[test]

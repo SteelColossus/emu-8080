@@ -72,6 +72,29 @@ fn assert_program_counter_has_value(state: &State, expected_value: u16) {
     );
 }
 
+pub fn assert_memory_location_contains_value(
+    state: &State,
+    memory_address: u16,
+    expected_value: u8,
+) {
+    let actual_value = state.get_value_at_memory_location(memory_address);
+    assert_eq!(
+        actual_value, expected_value,
+        "Expected memory location to have value {}, but instead it had value {}",
+        expected_value, actual_value
+    );
+}
+
+pub fn assert_low_high_memory_location_contains_value(
+    state: &State,
+    low_memory_address: u8,
+    high_memory_address: u8,
+    expected_value: u8,
+) {
+    let memory_address = state.concat_low_high_bytes(low_memory_address, high_memory_address);
+    assert_memory_location_contains_value(state, memory_address, expected_value);
+}
+
 pub fn assert_full_state_is_as_expected(
     state: &State,
     expected_register_state: RegisterState,
