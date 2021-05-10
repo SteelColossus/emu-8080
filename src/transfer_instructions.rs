@@ -14,10 +14,37 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 }
 
 #[cfg_attr(test, mutate)]
+pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
+    let memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let memory_location_value = state.get_value_at_memory_location(memory_address);
+    state.set_register(Register::A, memory_location_value as i8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = State::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.get_register_value(Register::A);
     state.set_value_at_memory_location(memory_address, accumulator_value as u8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
+    let first_memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let second_memory_address = first_memory_address.wrapping_add(1);
+    let first_memory_value = state.get_value_at_memory_location(first_memory_address);
+    let second_memory_value = state.get_value_at_memory_location(second_memory_address);
+    state.set_register(Register::L, first_memory_value as i8);
+    state.set_register(Register::H, second_memory_value as i8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
+    let first_memory_address = State::concat_low_high_bytes(low_data, high_data);
+    let second_memory_address = first_memory_address.wrapping_add(1);
+    let h_register_value = state.get_register_value(Register::H) as u8;
+    let l_register_value = state.get_register_value(Register::L) as u8;
+    state.set_value_at_memory_location(first_memory_address, l_register_value);
+    state.set_value_at_memory_location(second_memory_address, h_register_value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -29,7 +56,7 @@ pub fn xchg_instruction(state: &mut State) {
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::{
-        assert_low_high_memory_location_contains_value, assert_state_is_as_expected,
+        assert_memory_location_contains_value, assert_state_is_as_expected,
     };
     use crate::{Register, State};
     use maplit::hashmap;
@@ -91,12 +118,73 @@ mod tests {
     }
 
     #[test]
-    fn sta_stores_the_accumulator_value_into_the_given_memory_address() {
-        let mut state = State::with_initial_register_state(hashmap! { Register::A => -42 });
-        let (low_data, high_data) = (0x99, 0x01);
-        crate::transfer_instructions::sta_instruction(&mut state, low_data, high_data);
+    fn lda_loads_the_value_at_the_given_memory_location_into_the_accumulator() {
+        let mut state = State::default();
+        state.set_value_at_memory_location(0x0040, 214);
+        crate::transfer_instructions::lda_instruction(&mut state, 0x40, 0x00);
         assert_state_is_as_expected(&state, hashmap! { Register::A => -42 }, HashMap::new());
-        assert_low_high_memory_location_contains_value(&state, low_data, high_data, 214);
+    }
+
+    #[test]
+    fn sta_stores_the_accumulator_value_into_the_given_memory_location() {
+        let mut state = State::with_initial_register_state(hashmap! { Register::A => -42 });
+        crate::transfer_instructions::sta_instruction(&mut state, 0x99, 0x01);
+        assert_state_is_as_expected(&state, hashmap! { Register::A => -42 }, HashMap::new());
+        assert_memory_location_contains_value(&state, 0x0199, 214);
+    }
+
+    #[test]
+    fn lhld_loads_values_at_given_and_following_memory_location_into_registers() {
+        let mut state = State::default();
+        state.set_value_at_memory_location(0x592B, 100);
+        state.set_value_at_memory_location(0x592C, 176);
+        crate::transfer_instructions::lhld_instruction(&mut state, 0x2B, 0x59);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::H => -80, Register::L => 100 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn lhld_at_max_memory_location_overflows_around_to_retrieving_from_first() {
+        let mut state = State::default();
+        state.set_value_at_memory_location(0xFFFF, 89);
+        state.set_value_at_memory_location(0x0000, 187);
+        crate::transfer_instructions::lhld_instruction(&mut state, 0xFF, 0xFF);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::H => -69, Register::L => 89 },
+            HashMap::new(),
+        )
+    }
+
+    #[test]
+    fn shld_stores_register_values_at_given_and_following_memory_location() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::H => 106, Register::L => -22 });
+        crate::transfer_instructions::shld_instruction(&mut state, 0xFF, 0xD3);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::H => 106, Register::L => -22 },
+            HashMap::new(),
+        );
+        assert_memory_location_contains_value(&state, 0xD3FF, 234);
+        assert_memory_location_contains_value(&state, 0xD400, 106);
+    }
+
+    #[test]
+    fn shld_at_max_memory_location_overflows_around_to_storing_at_first() {
+        let mut state =
+            State::with_initial_register_state(hashmap! { Register::H => -96, Register::L => 69 });
+        crate::transfer_instructions::shld_instruction(&mut state, 0xFF, 0xFF);
+        assert_state_is_as_expected(
+            &state,
+            hashmap! { Register::H => -96, Register::L => 69 },
+            HashMap::new(),
+        );
+        assert_memory_location_contains_value(&state, 0xFFFF, 69);
+        assert_memory_location_contains_value(&state, 0x0000, 160);
     }
 
     #[test]

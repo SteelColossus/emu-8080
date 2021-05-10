@@ -85,16 +85,6 @@ pub fn assert_memory_location_contains_value(
     );
 }
 
-pub fn assert_low_high_memory_location_contains_value(
-    state: &State,
-    low_memory_address: u8,
-    high_memory_address: u8,
-    expected_value: u8,
-) {
-    let memory_address = State::concat_low_high_bytes(low_memory_address, high_memory_address);
-    assert_memory_location_contains_value(state, memory_address, expected_value);
-}
-
 pub fn assert_full_state_is_as_expected(
     state: &State,
     expected_register_state: RegisterState,
