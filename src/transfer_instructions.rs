@@ -8,9 +8,34 @@ pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn mvi_mem_instruction(state: &mut State, data: i8) {
+    let h_register_value = state.get_register_value(Register::H) as u8;
+    let l_register_value = state.get_register_value(Register::L) as u8;
+    let memory_address =
+        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    state.set_value_at_memory_location(memory_address, data as u8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn mov_instruction(state: &mut State, from_register: Register, to_register: Register) {
     let from_register_value = state.get_register_value(from_register);
     mvi_instruction(state, to_register, from_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
+    let h_register_value = state.get_register_value(Register::H) as u8;
+    let l_register_value = state.get_register_value(Register::L) as u8;
+    let memory_address =
+        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    let data = state.get_value_at_memory_location(memory_address);
+    mvi_instruction(state, register, data as i8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn mov_to_mem_instruction(state: &mut State, register: Register) {
+    let data = state.get_register_value(register);
+    mvi_mem_instruction(state, data as i8);
 }
 
 #[cfg_attr(test, mutate)]
@@ -85,6 +110,21 @@ mod tests {
     }
 
     #[test]
+    fn mvi_mem_loads_data_into_memory_location_determined_by_registers() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 62, Register::L => 13 })
+            .build();
+        crate::transfer_instructions::mvi_mem_instruction(&mut state, -64);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 62, Register::L => 13 })
+                .memory_values(hashmap! { 0x3E0D => 192 })
+                .build(),
+        );
+    }
+
+    #[test]
     fn mov_moves_value_from_one_register_to_another() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 99 })
@@ -129,6 +169,117 @@ mod tests {
                     Register::E => 91,
                     Register::L => 91,
                 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_from_mem_moves_from_memory_to_given_register() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 80, Register::L => -103 })
+            .memory_values(hashmap! { 0x5099 => 187 })
+            .build();
+        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::H => 80, Register::L => -103, Register::B => -69 },
+                )
+                .memory_values(hashmap! { 0x5099 => 187 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_from_mem_can_move_with_default_registers() {
+        let mut state = StateBuilder::default()
+            .memory_values(hashmap! { 0x0000 => 128 })
+            .build();
+        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::D);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::D => -128 })
+                .memory_values(hashmap! { 0x0000 => 128 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_from_mem_can_overwrite_with_default_memory() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -43, Register::L => 75, Register::E => 48 })
+            .build();
+        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::E);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -43, Register::L => 75 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_from_mem_can_overwrite_register_used_for_memory_location() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -27, Register::L => 4 })
+            .memory_values(hashmap! { 0xE503 => 76, 0xE504 => 179, 0xE505 => 148 })
+            .build();
+        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::L);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -27, Register::L => -77 })
+                .memory_values(hashmap! { 0xE503 => 76, 0xE504 => 179, 0xE505 => 148 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_to_mem_moves_from_given_register_to_memory_location() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 117, Register::L => 35, Register::C => 63 })
+            .build();
+        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::C);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::H => 117, Register::L => 35, Register::C => 63 },
+                )
+                .memory_values(hashmap! { 0x7523 => 63 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_to_mem_can_overwrite_with_default_register() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 72, Register::L => -56 })
+            .memory_values(hashmap! { 0x48C7 => 53, 0x48C8 => 235, 0x48C9 => 159 })
+            .build();
+        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 72, Register::L => -56 })
+                .memory_values(hashmap! { 0x48C7 => 53, 0x48C9 => 159 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mov_to_mem_can_move_to_memory_from_default_registers() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::B => 18 })
+            .build();
+        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => 18 })
+                .memory_values(hashmap! { 0x0000 => 18 })
                 .build(),
         );
     }
