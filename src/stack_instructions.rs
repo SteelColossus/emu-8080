@@ -12,22 +12,22 @@ pub fn sphl_instruction(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
-    use crate::base_test_functions::assert_full_state_is_as_expected;
-    use crate::{Register, State};
+    use crate::base_test_functions::assert_state_is_as_expected;
+    use crate::{Register, StateBuilder};
     use maplit::hashmap;
-    use std::collections::HashMap;
 
     #[test]
     fn sphl_sets_the_stack_pointer_to_register_values() {
-        let mut state =
-            State::with_initial_register_state(hashmap! { Register::H => 10, Register::L => -100 });
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 10, Register::L => -100 })
+            .build();
         crate::stack_instructions::sphl_instruction(&mut state);
-        assert_full_state_is_as_expected(
+        assert_state_is_as_expected(
             &state,
-            hashmap! { Register::H => 10, Register::L => -100 },
-            HashMap::new(),
-            0x0000,
-            0x0A9C,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 10, Register::L => -100 })
+                .stack_pointer(0x0A9C)
+                .build(),
         );
     }
 }

@@ -77,6 +77,7 @@ pub enum ConditionFlag {
     AuxiliaryCarry,
 }
 
+#[derive(Clone)]
 pub struct ConditionFlags {
     pub zero: bool,
     pub sign: bool,
@@ -85,7 +86,7 @@ pub struct ConditionFlags {
     pub auxiliary_carry: bool,
 }
 
-impl ConditionFlags {
+impl Default for ConditionFlags {
     #[cfg_attr(test, mutate)]
     fn default() -> Self {
         ConditionFlags {
@@ -95,6 +96,36 @@ impl ConditionFlags {
             carry: false,
             auxiliary_carry: false,
         }
+    }
+}
+
+impl ConditionFlags {
+    #[cfg_attr(test, mutate)]
+    fn get_mut(&mut self, condition_flag: ConditionFlag) -> &mut bool {
+        match condition_flag {
+            ConditionFlag::Zero => &mut self.zero,
+            ConditionFlag::Sign => &mut self.sign,
+            ConditionFlag::Parity => &mut self.parity,
+            ConditionFlag::Carry => &mut self.carry,
+            ConditionFlag::AuxiliaryCarry => &mut self.auxiliary_carry,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_value(&self, condition_flag: ConditionFlag) -> bool {
+        match condition_flag {
+            ConditionFlag::Zero => self.zero,
+            ConditionFlag::Sign => self.sign,
+            ConditionFlag::Parity => self.parity,
+            ConditionFlag::Carry => self.carry,
+            ConditionFlag::AuxiliaryCarry => self.auxiliary_carry,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_value(&mut self, condition_flag: ConditionFlag, value: bool) {
+        let flag = self.get_mut(condition_flag);
+        *flag = value;
     }
 }
 
@@ -108,51 +139,22 @@ pub struct State {
     memory: [u8; MEMORY_SIZE],
 }
 
+impl Default for State {
+    #[cfg_attr(test, mutate)]
+    fn default() -> Self {
+        StateBuilder::default().build()
+    }
+}
+
 impl State {
-    #[cfg_attr(test, mutate)]
-    pub fn default() -> Self {
-        State {
-            registers: hashmap! {
-                Register::A => 0,
-                Register::B => 0,
-                Register::C => 0,
-                Register::D => 0,
-                Register::E => 0,
-                Register::H => 0,
-                Register::L => 0,
-            },
-            condition_flags: ConditionFlags::default(),
-            program_counter: 0x0000,
-            stack_pointer: 0x0000,
-            memory: [0; MEMORY_SIZE],
-        }
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn with_initial_register_state(initial_state: RegisterState) -> Self {
-        let mut state = State::default();
-
-        for (register, value) in initial_state {
-            state.set_register(register, value);
-        }
-
-        state
-    }
-
     #[cfg_attr(test, mutate)]
     pub fn get_register_state(&self) -> &RegisterState {
         &self.registers
     }
 
     #[cfg_attr(test, mutate)]
-    fn get_condition_flag_value(&self, condition_flag: ConditionFlag) -> bool {
-        match condition_flag {
-            ConditionFlag::Zero => self.condition_flags.zero,
-            ConditionFlag::Sign => self.condition_flags.sign,
-            ConditionFlag::Parity => self.condition_flags.parity,
-            ConditionFlag::Carry => self.condition_flags.carry,
-            ConditionFlag::AuxiliaryCarry => self.condition_flags.auxiliary_carry,
-        }
+    pub fn get_condition_flag_value(&self, condition_flag: ConditionFlag) -> bool {
+        self.condition_flags.get_value(condition_flag)
     }
 
     #[cfg_attr(test, mutate)]
@@ -243,14 +245,106 @@ impl State {
     }
 }
 
+#[derive(Default)]
+pub struct StateBuilder {
+    register_values: Option<RegisterState>,
+    condition_flag_values: Option<HashMap<ConditionFlag, bool>>,
+    program_counter: Option<u16>,
+    stack_pointer: Option<u16>,
+    memory_values: Option<HashMap<u16, u8>>,
+}
+
+impl StateBuilder {
+    #[cfg_attr(test, mutate)]
+    pub fn register_values(&mut self, register_values: RegisterState) -> &mut Self {
+        let mut new = self;
+        new.register_values = Some(register_values);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn condition_flag_values(
+        &mut self,
+        condition_flag_values: HashMap<ConditionFlag, bool>,
+    ) -> &mut Self {
+        let mut new = self;
+        new.condition_flag_values = Some(condition_flag_values);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn program_counter(&mut self, program_counter: u16) -> &mut Self {
+        let mut new = self;
+        new.program_counter = Some(program_counter);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn stack_pointer(&mut self, stack_pointer: u16) -> &mut Self {
+        let mut new = self;
+        new.stack_pointer = Some(stack_pointer);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn memory_values(&mut self, memory_values: HashMap<u16, u8>) -> &mut Self {
+        let mut new = self;
+        new.memory_values = Some(memory_values);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn build(&self) -> State {
+        let mut registers = hashmap! {
+            Register::A => 0,
+            Register::B => 0,
+            Register::C => 0,
+            Register::D => 0,
+            Register::E => 0,
+            Register::H => 0,
+            Register::L => 0,
+        };
+        let mut condition_flags = ConditionFlags::default();
+        let mut memory = [0; MEMORY_SIZE];
+
+        if let Some(rvs) = &self.register_values {
+            for (register, value) in rvs {
+                registers.insert(*register, *value);
+            }
+        }
+
+        if let Some(cfvs) = &self.condition_flag_values {
+            for (condition_flag, value) in cfvs {
+                condition_flags.set_value(*condition_flag, *value);
+            }
+        }
+
+        if let Some(mvs) = &self.memory_values {
+            for (memory_address, value) in mvs {
+                memory[*memory_address as usize] = *value;
+            }
+        }
+
+        State {
+            registers,
+            condition_flags,
+            program_counter: match self.program_counter {
+                Some(pc) => pc,
+                None => 0x0000,
+            },
+            stack_pointer: match self.stack_pointer {
+                Some(sp) => sp,
+                None => 0x0000,
+            },
+            memory,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::base_test_functions::{
-        assert_memory_location_contains_value, assert_state_is_as_expected,
-    };
-    use crate::{Register, RegisterState, State, MEMORY_SIZE};
-    use maplit::hashmap;
-    use std::collections::HashMap;
+    use crate::base_test_functions::assert_state_is_as_expected;
+    use crate::State;
 
     #[test]
     fn can_get_state_of_all_registers() {
@@ -262,21 +356,7 @@ mod tests {
     #[test]
     fn default_state_has_all_default_values() {
         let state = State::default();
-        assert_state_is_as_expected(&state, RegisterState::new(), HashMap::new());
-        for memory_address in 0..MEMORY_SIZE {
-            assert_memory_location_contains_value(&state, memory_address as u16, 0);
-        }
-    }
-
-    #[test]
-    fn can_create_state_with_initial_register_values() {
-        let state =
-            State::with_initial_register_state(hashmap! { Register::A => 23, Register::C => 34 });
-        assert_state_is_as_expected(
-            &state,
-            hashmap! { Register::A => 23, Register::C => 34 },
-            HashMap::new(),
-        );
+        assert_state_is_as_expected(&state, &State::default());
     }
 
     #[test]
