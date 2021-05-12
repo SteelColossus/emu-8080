@@ -85,8 +85,8 @@ fn assert_memory_location_contains_value(state: &State, memory_address: u16, exp
     let actual_value = state.get_value_at_memory_location(memory_address);
     assert_eq!(
         actual_value, expected_value,
-        "Expected memory location to have value {}, but instead it had value {}",
-        expected_value, actual_value
+        "Expected memory location {:#06X} to have value {}, but instead it had value {}",
+        memory_address, expected_value, actual_value
     );
 }
 
