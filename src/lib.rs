@@ -53,6 +53,11 @@ pub mod bit_operations {
     pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
         u16::from(high_byte) << 8 | u16::from(low_byte)
     }
+
+    #[cfg_attr(test, mutate)]
+    pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
+        ((value & 0x00FF) as u8, (value >> 8) as u8)
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -68,6 +73,7 @@ pub enum Register {
 
 pub type RegisterState = HashMap<Register, i8>;
 
+#[derive(Eq, PartialEq, Debug)]
 pub enum RegisterPair {
     BC,
     DE,
@@ -77,30 +83,58 @@ pub enum RegisterPair {
 
 impl RegisterPair {
     #[cfg_attr(test, mutate)]
-    pub fn get_low_value(&self, state: &State) -> i8 {
+    pub fn get_low_high_value(&self, state: &State) -> (i8, i8) {
         match self {
-            RegisterPair::BC => state.get_register_value(Register::C),
-            RegisterPair::DE => state.get_register_value(Register::E),
-            RegisterPair::HL => state.get_register_value(Register::L),
-            RegisterPair::SP => (state.stack_pointer & 0x00FF) as i8,
-        }
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn get_high_value(&self, state: &State) -> i8 {
-        match self {
-            RegisterPair::BC => state.get_register_value(Register::B),
-            RegisterPair::DE => state.get_register_value(Register::D),
-            RegisterPair::HL => state.get_register_value(Register::H),
-            RegisterPair::SP => (state.stack_pointer >> 8) as i8,
+            RegisterPair::BC => (
+                state.get_register_value(Register::C),
+                state.get_register_value(Register::B),
+            ),
+            RegisterPair::DE => (
+                state.get_register_value(Register::E),
+                state.get_register_value(Register::D),
+            ),
+            RegisterPair::HL => (
+                state.get_register_value(Register::L),
+                state.get_register_value(Register::H),
+            ),
+            RegisterPair::SP => {
+                let (low_value, high_value) =
+                    bit_operations::split_to_low_high_bytes(state.stack_pointer);
+                (low_value as i8, high_value as i8)
+            }
         }
     }
 
     #[cfg_attr(test, mutate)]
     pub fn get_full_value(&self, state: &State) -> u16 {
-        let low_value = self.get_low_value(state);
-        let high_value = self.get_high_value(state);
+        if self == &RegisterPair::SP {
+            return state.stack_pointer;
+        }
+
+        let (low_value, high_value) = self.get_low_high_value(state);
         bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_low_high_value(&self, state: &mut State, low_value: i8, high_value: i8) {
+        match self {
+            RegisterPair::BC => {
+                state.set_register(Register::C, low_value);
+                state.set_register(Register::B, high_value);
+            }
+            RegisterPair::DE => {
+                state.set_register(Register::E, low_value);
+                state.set_register(Register::D, high_value);
+            }
+            RegisterPair::HL => {
+                state.set_register(Register::L, low_value);
+                state.set_register(Register::H, high_value);
+            }
+            RegisterPair::SP => {
+                state.stack_pointer =
+                    bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+            }
+        };
     }
 }
 
@@ -393,8 +427,7 @@ mod tests {
     #[test]
     fn stack_pointer_value_returned_by_register_pair_is_same_as_actual_value() {
         let state = StateBuilder::default().stack_pointer(0xF00F).build();
-        assert_eq!(0xF0, RegisterPair::SP.get_high_value(&state));
-        assert_eq!(0x0F, RegisterPair::SP.get_low_value(&state));
+        assert_eq!((0x0F, 0xF0), RegisterPair::SP.get_low_high_value(&state));
         assert_eq!(state.stack_pointer, RegisterPair::SP.get_full_value(&state));
     }
 

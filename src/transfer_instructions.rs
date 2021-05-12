@@ -33,6 +33,16 @@ pub fn mov_to_mem_instruction(state: &mut State, register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn lxi_instruction(
+    state: &mut State,
+    register_pair: RegisterPair,
+    low_data: i8,
+    high_data: i8,
+) {
+    register_pair.set_low_high_value(state, low_data, high_data);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
     let memory_location_value = state.get_value_at_memory_location(memory_address);
@@ -67,6 +77,34 @@ pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
+    if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
+        panic!(
+            "The register pair {:?} is not supported by the LDAX operation",
+            register_pair
+        );
+    }
+
+    let memory_address = register_pair.get_full_value(&state);
+    let value = state.get_value_at_memory_location(memory_address);
+    state.set_register(Register::A, value as i8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
+    if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
+        panic!(
+            "The register pair {:?} is not supported by the STAX operation",
+            register_pair
+        );
+    }
+
+    let value = state.get_register_value(Register::A);
+    let memory_address = register_pair.get_full_value(&state);
+    state.set_value_at_memory_location(memory_address, value as u8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn xchg_instruction(state: &mut State) {
     state.exchange_register_values(Register::D, Register::H);
     state.exchange_register_values(Register::E, Register::L);
@@ -75,7 +113,7 @@ pub fn xchg_instruction(state: &mut State) {
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{Register, State, StateBuilder};
+    use crate::{Register, RegisterPair, State, StateBuilder};
     use maplit::hashmap;
 
     #[test]
@@ -279,6 +317,28 @@ mod tests {
     }
 
     #[test]
+    fn lxi_loads_the_given_data_into_the_given_register_pair() {
+        let mut state = State::default();
+        crate::transfer_instructions::lxi_instruction(&mut state, RegisterPair::BC, 96, -29);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => -29, Register::C => 96 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn lxi_loads_the_given_data_into_the_stack_pointer() {
+        let mut state = State::default();
+        crate::transfer_instructions::lxi_instruction(&mut state, RegisterPair::SP, -57, 77);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default().stack_pointer(0x4DC7).build(),
+        );
+    }
+
+    #[test]
     fn lda_loads_the_value_at_the_given_memory_location_into_the_accumulator() {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0x0040 => 214 })
@@ -366,6 +426,128 @@ mod tests {
                 .memory_values(hashmap! { 0xFFFF => 69, 0x0000 => 160 })
                 .build(),
         );
+    }
+
+    #[test]
+    fn ldax_loads_memory_location_content_into_the_accumulator() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::D => 43, Register::E => -26 })
+            .memory_values(hashmap! { 0x2BE5 => 27, 0x2BE6 => 107, 0x2BE7 => 243})
+            .build();
+        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::D => 43, Register::E => -26, Register::A => 107 },
+                )
+                .memory_values(hashmap! { 0x2BE5 => 27, 0x2BE6 => 107, 0x2BE7 => 243})
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ldax_can_load_with_default_register_pair_values() {
+        let mut state = StateBuilder::default()
+            .memory_values(hashmap! { 0x0000 => 101 })
+            .build();
+        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::BC);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 101 })
+                .memory_values(hashmap! { 0x0000 => 101 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ldax_overwrites_accumulator_with_default_memory() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::B => 47, Register::C => 31, Register::A => -9 })
+            .build();
+        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::BC);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => 47, Register::C => 31 })
+                .build(),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "The register pair HL is not supported by the LDAX operation")]
+    fn ldax_does_not_support_the_hl_register_pair() {
+        let mut state = State::default();
+        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::HL);
+    }
+
+    #[test]
+    #[should_panic(expected = "The register pair SP is not supported by the LDAX operation")]
+    fn ldax_does_not_support_the_sp_register_pair() {
+        let mut state = State::default();
+        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::SP);
+    }
+
+    #[test]
+    fn stax_stores_accumulator_value_into_the_memory_location() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::D => -96, Register::E => 17, Register::A => -34 })
+            .build();
+        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::D => -96, Register::E => 17, Register::A => -34 },
+                )
+                .memory_values(hashmap! { 0xA011 => 222 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn stax_can_store_with_default_register_pair_values() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 107 })
+            .build();
+        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 107 })
+                .memory_values(hashmap! { 0x0000 => 107 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn stax_overwrites_memory_location_with_default_accumulator() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::B => -38, Register::C => 15 })
+            .memory_values(hashmap! { 0xDA0F => 174 })
+            .build();
+        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::BC);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => -38, Register::C => 15 })
+                .build(),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "The register pair HL is not supported by the STAX operation")]
+    fn stax_does_not_support_the_hl_register_pair() {
+        let mut state = State::default();
+        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::HL);
+    }
+
+    #[test]
+    #[should_panic(expected = "The register pair SP is not supported by the STAX operation")]
+    fn stax_does_not_support_the_sp_register_pair() {
+        let mut state = State::default();
+        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::SP);
     }
 
     #[test]
