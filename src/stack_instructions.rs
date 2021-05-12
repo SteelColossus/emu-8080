@@ -1,13 +1,10 @@
-use crate::{Register, State};
+use crate::{RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
 pub fn sphl_instruction(state: &mut State) {
-    let h_register_value = state.get_register_value(Register::H) as u8;
-    let l_register_value = state.get_register_value(Register::L) as u8;
-    state.stack_pointer =
-        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    state.stack_pointer = RegisterPair::HL.get_full_value(&state);
 }
 
 #[cfg(test)]

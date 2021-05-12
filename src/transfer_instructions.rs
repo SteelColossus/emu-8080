@@ -1,4 +1,4 @@
-use crate::{Register, State};
+use crate::{Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -9,10 +9,7 @@ pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
 
 #[cfg_attr(test, mutate)]
 pub fn mvi_mem_instruction(state: &mut State, data: i8) {
-    let h_register_value = state.get_register_value(Register::H) as u8;
-    let l_register_value = state.get_register_value(Register::L) as u8;
-    let memory_address =
-        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    let memory_address = RegisterPair::HL.get_full_value(&state);
     state.set_value_at_memory_location(memory_address, data as u8);
 }
 
@@ -24,10 +21,7 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 
 #[cfg_attr(test, mutate)]
 pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
-    let h_register_value = state.get_register_value(Register::H) as u8;
-    let l_register_value = state.get_register_value(Register::L) as u8;
-    let memory_address =
-        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    let memory_address = RegisterPair::HL.get_full_value(&state);
     let data = state.get_value_at_memory_location(memory_address);
     mvi_instruction(state, register, data as i8);
 }

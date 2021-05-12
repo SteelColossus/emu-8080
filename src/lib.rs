@@ -68,6 +68,42 @@ pub enum Register {
 
 pub type RegisterState = HashMap<Register, i8>;
 
+pub enum RegisterPair {
+    BC,
+    DE,
+    HL,
+    SP,
+}
+
+impl RegisterPair {
+    #[cfg_attr(test, mutate)]
+    pub fn get_low_value(&self, state: &State) -> i8 {
+        match self {
+            RegisterPair::BC => state.get_register_value(Register::C),
+            RegisterPair::DE => state.get_register_value(Register::E),
+            RegisterPair::HL => state.get_register_value(Register::L),
+            RegisterPair::SP => (state.stack_pointer & 0x00FF) as i8,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_high_value(&self, state: &State) -> i8 {
+        match self {
+            RegisterPair::BC => state.get_register_value(Register::B),
+            RegisterPair::DE => state.get_register_value(Register::D),
+            RegisterPair::HL => state.get_register_value(Register::H),
+            RegisterPair::SP => (state.stack_pointer >> 8) as i8,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_full_value(&self, state: &State) -> u16 {
+        let low_value = self.get_low_value(state);
+        let high_value = self.get_high_value(state);
+        bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum ConditionFlag {
     Zero,
@@ -338,7 +374,7 @@ impl StateBuilder {
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::State;
+    use crate::{RegisterPair, State, StateBuilder};
 
     #[test]
     fn can_get_state_of_all_registers() {
@@ -351,6 +387,15 @@ mod tests {
     fn default_state_has_all_default_values() {
         let state = State::default();
         assert_state_is_as_expected(&state, &State::default());
+    }
+
+    #[allow(overflowing_literals)]
+    #[test]
+    fn stack_pointer_value_returned_by_register_pair_is_same_as_actual_value() {
+        let state = StateBuilder::default().stack_pointer(0xF00F).build();
+        assert_eq!(0xF0, RegisterPair::SP.get_high_value(&state));
+        assert_eq!(0x0F, RegisterPair::SP.get_low_value(&state));
+        assert_eq!(state.stack_pointer, RegisterPair::SP.get_full_value(&state));
     }
 
     #[test]

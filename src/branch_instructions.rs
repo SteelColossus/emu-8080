@@ -1,4 +1,4 @@
-use crate::{ConditionFlag, Register, State};
+use crate::{ConditionFlag, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -25,10 +25,7 @@ pub fn jcond_instruction(
 
 #[cfg_attr(test, mutate)]
 pub fn pchl_instruction(state: &mut State) {
-    let h_register_value = state.get_register_value(Register::H) as u8;
-    let l_register_value = state.get_register_value(Register::L) as u8;
-    state.program_counter =
-        crate::bit_operations::concat_low_high_bytes(l_register_value, h_register_value);
+    state.program_counter = RegisterPair::HL.get_full_value(&state);
 }
 
 #[cfg(test)]
