@@ -328,14 +328,8 @@ impl StateBuilder {
         State {
             registers,
             condition_flags,
-            program_counter: match self.program_counter {
-                Some(pc) => pc,
-                None => 0x0000,
-            },
-            stack_pointer: match self.stack_pointer {
-                Some(sp) => sp,
-                None => 0x0000,
-            },
+            program_counter: self.program_counter.unwrap_or(0x0000),
+            stack_pointer: self.stack_pointer.unwrap_or(0x0000),
             memory,
         }
     }
