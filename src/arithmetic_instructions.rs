@@ -1,4 +1,4 @@
-use crate::{Register, State};
+use crate::{Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -12,6 +12,20 @@ pub fn inr_instruction(state: &mut State, register: Register) {
 pub fn dcr_instruction(state: &mut State, register: Register) {
     state.decrease_register(register, 1);
     state.set_condition_flags_from_register_value(register);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn inx_instruction(state: &mut State, register_pair: RegisterPair) {
+    let mut value = register_pair.get_full_value(state);
+    value = value.wrapping_add(1);
+    register_pair.set_full_value(state, value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn dcx_instruction(state: &mut State, register_pair: RegisterPair) {
+    let mut value = register_pair.get_full_value(state);
+    value = value.wrapping_sub(1);
+    register_pair.set_full_value(state, value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -73,7 +87,7 @@ pub fn sbi_instruction(state: &mut State, data: i8) {
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{ConditionFlag, Register, State, StateBuilder};
+    use crate::{ConditionFlag, Register, RegisterPair, State, StateBuilder};
     use maplit::hashmap;
 
     #[test]
@@ -157,6 +171,62 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::C => 127 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn inx_increases_the_register_pair_value() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::D => 47, Register::E => -115 })
+            .build();
+        crate::arithmetic_instructions::inx_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::D => 47, Register::E => -114 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn inx_can_overflow_into_higher_register_of_pair() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -52, Register::L => -1 })
+            .build();
+        crate::arithmetic_instructions::inx_instruction(&mut state, RegisterPair::HL);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -51, Register::L => 0 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dcx_decreases_the_register_pair_value() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 81, Register::L => -122 })
+            .build();
+        crate::arithmetic_instructions::dcx_instruction(&mut state, RegisterPair::HL);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 81, Register::L => -123 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dcx_can_underflow_into_higher_register_of_pair() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::D => -107, Register::E => 0 })
+            .build();
+        crate::arithmetic_instructions::dcx_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::D => -108, Register::E => -1 })
                 .build(),
         );
     }

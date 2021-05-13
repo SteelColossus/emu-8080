@@ -136,6 +136,16 @@ impl RegisterPair {
             }
         };
     }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_full_value(&self, state: &mut State, value: u16) {
+        if self == &RegisterPair::SP {
+            state.stack_pointer = value;
+        }
+
+        let (low_value, high_value) = bit_operations::split_to_low_high_bytes(value);
+        self.set_low_high_value(state, low_value as i8, high_value as i8);
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
