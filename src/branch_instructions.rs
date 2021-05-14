@@ -1,8 +1,6 @@
-use crate::{ConditionFlag, RegisterPair, State};
+use crate::{Condition, ConditionFlag, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
-
-type Condition = (ConditionFlag, bool);
 
 #[cfg_attr(test, mutate)]
 fn is_condition_flag_set(state: &State, condition: Condition, base_instruction: &str) -> bool {
