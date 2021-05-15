@@ -155,11 +155,11 @@ impl Operation {
             Operation::Rcond(condition) => {
                 crate::branch_instructions::rcond_instruction(state, *condition)
             }
-            Operation::Push(_) => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            Operation::Push(register_pair) => {
+                crate::stack_instructions::push_instruction(state, *register_pair)
             }
-            Operation::Pop(_) => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            Operation::Pop(register_pair) => {
+                crate::stack_instructions::pop_instruction(state, *register_pair)
             }
             Operation::In => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")

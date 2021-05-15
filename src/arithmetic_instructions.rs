@@ -30,7 +30,7 @@ pub fn dcx_instruction(state: &mut State, register_pair: RegisterPair) {
 
 #[cfg_attr(test, mutate)]
 pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
-    let mut hl_value = RegisterPair::HL.get_full_value(state);
+    let hl_value = RegisterPair::HL.get_full_value(state);
     let register_pair_value = register_pair.get_full_value(state);
     let (hl_value_after_addition, carry) = hl_value.overflowing_add(register_pair_value);
     RegisterPair::HL.set_full_value(state, hl_value_after_addition);
