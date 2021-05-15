@@ -119,8 +119,8 @@ impl Operation {
             Operation::Dcx(register_pair) => {
                 crate::arithmetic_instructions::dcx_instruction(state, *register_pair)
             }
-            Operation::Dad(_) => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            Operation::Dad(register_pair) => {
+                crate::arithmetic_instructions::dad_instruction(state, *register_pair)
             }
             Operation::Cmp(register) => {
                 crate::logical_instructions::cmp_instruction(state, *register)

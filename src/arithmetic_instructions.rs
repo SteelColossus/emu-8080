@@ -29,6 +29,15 @@ pub fn dcx_instruction(state: &mut State, register_pair: RegisterPair) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
+    let mut hl_value = RegisterPair::HL.get_full_value(state);
+    let register_pair_value = register_pair.get_full_value(state);
+    let (hl_value_after_addition, carry) = hl_value.overflowing_add(register_pair_value);
+    RegisterPair::HL.set_full_value(state, hl_value_after_addition);
+    state.condition_flags.carry = carry;
+}
+
+#[cfg_attr(test, mutate)]
 pub fn add_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.get_register_value(source_register);
     adi_instruction(state, source_register_value);
@@ -227,6 +236,65 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::D => -108, Register::E => -1 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dad_adds_the_given_register_pair_value_onto_existing_register_pair() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::B => 117, Register::C => -88, Register::H => 75, Register::L => 43 })
+            .build();
+        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::BC);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => 117, Register::C => -88, Register::H => -64, Register::L => -45 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dad_doubles_the_existing_register_pair_value_if_given() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 32, Register::L => -81 })
+            .build();
+        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::HL);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 65, Register::L => 94 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dad_adds_the_stack_pointer_value_if_given() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -96, Register::L => 6 })
+            .stack_pointer(0x13FE)
+            .build();
+        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::SP);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -76, Register::L => 4 })
+                .stack_pointer(0x13FE)
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dad_sets_the_carry_flag_when_overflowing() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::D => -110, Register::E => -48, Register::H => 109, Register::L => 48 })
+            .build();
+        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::DE);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::D => -110, Register::E => -48 })
+                .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
                 .build(),
         );
     }
