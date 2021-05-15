@@ -24,7 +24,9 @@ pub enum Operation {
     Sui,
     Sbi,
     Inr(Register),
+    InrMem,
     Dcr(Register),
+    DcrMem,
     Inx(RegisterPair),
     Dcx(RegisterPair),
     Dad(RegisterPair),
@@ -40,6 +42,8 @@ pub enum Operation {
     Rrc,
     Ral,
     Rar,
+    Cmc,
+    Stc,
     Jmp,
     Jcond(Condition),
     Call,
@@ -173,9 +177,11 @@ impl Operation {
             Operation::Inr(register) => {
                 crate::arithmetic_instructions::inr_instruction(state, *register)
             }
+            Operation::InrMem => crate::arithmetic_instructions::inr_mem_instruction(state),
             Operation::Dcr(register) => {
                 crate::arithmetic_instructions::dcr_instruction(state, *register)
             }
+            Operation::DcrMem => crate::arithmetic_instructions::dcr_mem_instruction(state),
             Operation::Inx(register_pair) => {
                 crate::arithmetic_instructions::inx_instruction(state, *register_pair)
             }
@@ -217,6 +223,8 @@ impl Operation {
             Operation::Rrc => crate::logical_instructions::rrc_instruction(state),
             Operation::Ral => crate::logical_instructions::ral_instruction(state),
             Operation::Rar => crate::logical_instructions::rar_instruction(state),
+            Operation::Cmc => crate::logical_instructions::cmc_instruction(state),
+            Operation::Stc => crate::logical_instructions::stc_instruction(state),
             Operation::Jmp => crate::branch_instructions::jmp_instruction(
                 state,
                 additional_byte_1.unwrap(),
@@ -261,12 +269,8 @@ impl Operation {
             Operation::Out => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
-            Operation::Ei => {
-                crate::stack_instructions::ei_instruction(state)
-            }
-            Operation::Di => {
-                crate::stack_instructions::di_instruction(state)
-            }
+            Operation::Ei => crate::stack_instructions::ei_instruction(state),
+            Operation::Di => crate::stack_instructions::di_instruction(state),
             Operation::Hlt => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
@@ -432,6 +436,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_100_100 => Operation::Inr(Register::H),
         0b00_101_100 => Operation::Inr(Register::L),
         0b00_111_100 => Operation::Inr(Register::A),
+        0b00_110_100 => Operation::InrMem,
         0b00_000_101 => Operation::Dcr(Register::B),
         0b00_001_101 => Operation::Dcr(Register::C),
         0b00_010_101 => Operation::Dcr(Register::D),
@@ -439,6 +444,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_100_101 => Operation::Dcr(Register::H),
         0b00_101_101 => Operation::Dcr(Register::L),
         0b00_111_101 => Operation::Dcr(Register::A),
+        0b00_110_101 => Operation::DcrMem,
         0b00_000_011 => Operation::Inx(RegisterPair::BC),
         0b00_010_011 => Operation::Inx(RegisterPair::DE),
         0b00_100_011 => Operation::Inx(RegisterPair::HL),
@@ -487,6 +493,8 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_001_111 => Operation::Rrc,
         0b00_010_111 => Operation::Ral,
         0b00_011_111 => Operation::Rar,
+        0b00_111_111 => Operation::Cmc,
+        0b00_110_111 => Operation::Stc,
         0b11_000_011 => Operation::Jmp,
         0b11_000_010 => Operation::Jcond((ConditionFlag::Zero, false)),
         0b11_001_010 => Operation::Jcond((ConditionFlag::Zero, true)),
@@ -792,6 +800,12 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_inr_mem() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_110_100);
+        assert_operation_equals_expected(&operation, &Operation::InrMem);
+    }
+
+    #[test]
     fn disassembler_handles_dcr() {
         let register_map = get_all_registers_for_op_codes(0b00_000_101, 3);
 
@@ -799,6 +813,12 @@ mod tests {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Dcr(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_dcr_mem() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_110_101);
+        assert_operation_equals_expected(&operation, &Operation::DcrMem);
     }
 
     #[test]
@@ -917,6 +937,18 @@ mod tests {
     fn disassembler_handles_rar() {
         let operation = crate::disassembler::disassemble_op_code(0b00_011_111);
         assert_operation_equals_expected(&operation, &Operation::Rar);
+    }
+
+    #[test]
+    fn disassembler_handles_cmc() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_111_111);
+        assert_operation_equals_expected(&operation, &Operation::Cmc);
+    }
+
+    #[test]
+    fn disassembler_handles_stc() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_110_111);
+        assert_operation_equals_expected(&operation, &Operation::Stc);
     }
 
     #[test]

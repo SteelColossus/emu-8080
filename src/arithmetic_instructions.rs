@@ -9,6 +9,24 @@ pub fn inr_instruction(state: &mut State, register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn inr_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    let new_memory_value = memory_value.wrapping_add(1);
+    state.set_value_at_memory_location(memory_address, new_memory_value);
+    state.set_condition_flags_from_result(new_memory_value as i8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn dcr_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    let new_memory_value = memory_value.wrapping_sub(1);
+    state.set_value_at_memory_location(memory_address, new_memory_value);
+    state.set_condition_flags_from_result(new_memory_value as i8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn dcr_instruction(state: &mut State, register: Register) {
     state.decrease_register(register, 1);
     state.set_condition_flags_from_register_value(register);
@@ -141,6 +159,42 @@ mod tests {
     }
 
     #[test]
+    fn inr_mem_increments_existing_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -124, Register::L => 55 })
+            .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 8, 0x8438 => 109 })
+            .build();
+        crate::arithmetic_instructions::inr_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -124, Register::L => 55 })
+                .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 9, 0x8438 => 109 })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn inr_mem_does_not_set_carry_flag_when_overflowing() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 21, Register::L => 91 })
+            .memory_values(hashmap! { 0x155B => 255 })
+            .build();
+        crate::arithmetic_instructions::inr_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 21, Register::L => 91 })
+                .memory_values(hashmap! { 0x155B => 0 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
     fn dcr_decrements_default_register_value() {
         let mut state = State::default();
         crate::arithmetic_instructions::dcr_instruction(&mut state, Register::C);
@@ -185,7 +239,45 @@ mod tests {
     }
 
     #[test]
-    fn inx_increases_the_register_pair_value() {
+    fn dcr_mem_decrements_existing_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -65, Register::L => -102 })
+            .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 233, 0xBF9B => 83 })
+            .build();
+        crate::arithmetic_instructions::dcr_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => -65, Register::L => -102 })
+                .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 232, 0xBF9B => 83 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn dcr_mem_does_not_set_carry_flag_when_underflowing() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 56, Register::L => -50 })
+            .memory_values(hashmap! { 0x38CE => 0 })
+            .build();
+        crate::arithmetic_instructions::dcr_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 56, Register::L => -50 })
+                .memory_values(hashmap! { 0x38CE => 255 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn inx_increments_the_register_pair_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => 47, Register::E => -115 })
             .build();
@@ -213,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn dcx_decreases_the_register_pair_value() {
+    fn dcx_decrements_the_register_pair_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 81, Register::L => -122 })
             .build();

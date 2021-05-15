@@ -125,28 +125,21 @@ mod tests {
                 .build(),
         );
     }
-    
+
     #[test]
     fn ei_sets_interrupts_as_enabled() {
         let mut state = State::default();
         crate::stack_instructions::ei_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
-            &StateBuilder::default()
-                .are_interrupts_enabled(true)
-                .build(),
+            &StateBuilder::default().are_interrupts_enabled(true).build(),
         )
     }
 
     #[test]
     fn di_sets_interrupts_as_disabled() {
-        let mut state = StateBuilder::default()
-            .are_interrupts_enabled(true)
-            .build();
+        let mut state = StateBuilder::default().are_interrupts_enabled(true).build();
         crate::stack_instructions::di_instruction(&mut state);
-        assert_state_is_as_expected(
-            &state,
-            &State::default(),
-        )
+        assert_state_is_as_expected(&state, &State::default())
     }
 }

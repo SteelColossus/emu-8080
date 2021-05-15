@@ -1,6 +1,6 @@
 use emu_8080::State;
 use std::fs;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 const FRAME_RATE: u64 = 60;
 
