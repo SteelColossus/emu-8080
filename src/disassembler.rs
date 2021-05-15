@@ -5,7 +5,18 @@ use mutagen::mutate;
 #[derive(Debug, Eq, PartialEq)]
 enum Operation {
     Mov(Register, Register),
+    MovFromMem(Register),
+    MovToMem(Register),
     Mvi(Register),
+    MviMem,
+    Lxi(RegisterPair),
+    Lda,
+    Sta,
+    Lhld,
+    Shld,
+    Ldax(RegisterPair),
+    Stax(RegisterPair),
+    Xchg,
     Add(Register),
     Sub(Register),
     Inx(RegisterPair),
@@ -114,6 +125,20 @@ fn disassemble_op_code(op_code: u8) -> Operation {
         0b01_111_100 => Operation::Mov(Register::H, Register::A),
         0b01_111_101 => Operation::Mov(Register::L, Register::A),
         0b01_111_111 => Operation::Mov(Register::A, Register::A),
+        0b01_000_110 => Operation::MovFromMem(Register::B),
+        0b01_001_110 => Operation::MovFromMem(Register::C),
+        0b01_010_110 => Operation::MovFromMem(Register::D),
+        0b01_011_110 => Operation::MovFromMem(Register::E),
+        0b01_100_110 => Operation::MovFromMem(Register::H),
+        0b01_101_110 => Operation::MovFromMem(Register::L),
+        0b01_111_110 => Operation::MovFromMem(Register::A),
+        0b01_110_000 => Operation::MovToMem(Register::B),
+        0b01_110_001 => Operation::MovToMem(Register::C),
+        0b01_110_010 => Operation::MovToMem(Register::D),
+        0b01_110_011 => Operation::MovToMem(Register::E),
+        0b01_110_100 => Operation::MovToMem(Register::H),
+        0b01_110_101 => Operation::MovToMem(Register::L),
+        0b01_110_111 => Operation::MovToMem(Register::A),
         0b00_000_110 => Operation::Mvi(Register::B),
         0b00_001_110 => Operation::Mvi(Register::C),
         0b00_010_110 => Operation::Mvi(Register::D),
@@ -121,6 +146,20 @@ fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_100_110 => Operation::Mvi(Register::H),
         0b00_101_110 => Operation::Mvi(Register::L),
         0b00_111_110 => Operation::Mvi(Register::A),
+        0b00_110_110 => Operation::MviMem,
+        0b00_000_001 => Operation::Lxi(RegisterPair::BC),
+        0b00_010_001 => Operation::Lxi(RegisterPair::DE),
+        0b00_100_001 => Operation::Lxi(RegisterPair::HL),
+        0b00_110_001 => Operation::Lxi(RegisterPair::SP),
+        0b00_111_010 => Operation::Lda,
+        0b00_110_010 => Operation::Sta,
+        0b00_101_010 => Operation::Lhld,
+        0b00_100_010 => Operation::Shld,
+        0b00_001_010 => Operation::Ldax(RegisterPair::BC),
+        0b00_011_010 => Operation::Ldax(RegisterPair::DE),
+        0b00_000_010 => Operation::Stax(RegisterPair::BC),
+        0b00_010_010 => Operation::Stax(RegisterPair::DE),
+        0b11_101_011 => Operation::Xchg,
         0b10_000_000 => Operation::Add(Register::B),
         0b10_000_001 => Operation::Add(Register::C),
         0b10_000_010 => Operation::Add(Register::D),
@@ -238,6 +277,115 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_mov() {
+        let source_register_map = get_all_registers_for_op_codes(0b01_000_000, 0);
+
+        for (interim_op_code, source_register) in source_register_map {
+            let destination_register_map = get_all_registers_for_op_codes(interim_op_code, 3);
+
+            for (op_code, destination_register) in destination_register_map {
+                let operation = crate::disassembler::disassemble_op_code(op_code);
+                assert_operation_equals_expected(
+                    &operation,
+                    &Operation::Mov(source_register, destination_register),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_mov_from_mem() {
+        let register_map = get_all_registers_for_op_codes(0b01_000_110, 3);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::MovFromMem(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_mov_to_mem() {
+        let register_map = get_all_registers_for_op_codes(0b01_110_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::MovToMem(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_mvi() {
+        let register_map = get_all_registers_for_op_codes(0b00_000_110, 3);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Mvi(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_mvi_mem() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_110_110);
+        assert_operation_equals_expected(&operation, &Operation::MviMem);
+    }
+
+    #[test]
+    fn disassembler_handles_lxi() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_001, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Lxi(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_lda() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_111_010);
+        assert_operation_equals_expected(&operation, &Operation::Lda);
+    }
+
+    #[test]
+    fn disassembler_handles_sta() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_110_010);
+        assert_operation_equals_expected(&operation, &Operation::Sta);
+    }
+
+    #[test]
+    fn disassembler_handles_lhld() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_101_010);
+        assert_operation_equals_expected(&operation, &Operation::Lhld);
+    }
+
+    #[test]
+    fn disassembler_handles_shld() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_100_010);
+        assert_operation_equals_expected(&operation, &Operation::Shld);
+    }
+
+    #[test]
+    fn disassembler_handles_ldax() {
+        let operation_bc = crate::disassembler::disassemble_op_code(0b00_001_010);
+        assert_operation_equals_expected(&operation_bc, &Operation::Ldax(RegisterPair::BC));
+        let operation_de = crate::disassembler::disassemble_op_code(0b00_011_010);
+        assert_operation_equals_expected(&operation_de, &Operation::Ldax(RegisterPair::DE));
+    }
+
+    #[test]
+    fn disassembler_handles_stax() {
+        let operation_bc = crate::disassembler::disassemble_op_code(0b00_000_010);
+        assert_operation_equals_expected(&operation_bc, &Operation::Stax(RegisterPair::BC));
+        let operation_de = crate::disassembler::disassemble_op_code(0b00_010_010);
+        assert_operation_equals_expected(&operation_de, &Operation::Stax(RegisterPair::DE));
+    }
+
+    #[test]
+    fn disassembler_handles_xchg() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_101_011);
+        assert_operation_equals_expected(&operation, &Operation::Xchg);
+    }
+
+    #[test]
     fn disassembler_handles_nop() {
         let operation = crate::disassembler::disassemble_op_code(0b00_000_000);
         assert_operation_equals_expected(&operation, &Operation::Nop);
@@ -278,33 +426,6 @@ mod tests {
         for (op_code, register) in register_map {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Sub(register));
-        }
-    }
-
-    #[test]
-    fn disassembler_handles_mvi() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_110, 3);
-
-        for (op_code, register) in register_map {
-            let operation = crate::disassembler::disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Mvi(register));
-        }
-    }
-
-    #[test]
-    fn disassembler_handles_mov() {
-        let source_register_map = get_all_registers_for_op_codes(0b01_000_000, 0);
-
-        for (interim_op_code, source_register) in source_register_map {
-            let destination_register_map = get_all_registers_for_op_codes(interim_op_code, 3);
-
-            for (op_code, destination_register) in destination_register_map {
-                let operation = crate::disassembler::disassemble_op_code(op_code);
-                assert_operation_equals_expected(
-                    &operation,
-                    &Operation::Mov(source_register, destination_register),
-                );
-            }
         }
     }
 
