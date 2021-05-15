@@ -221,6 +221,8 @@ pub struct State {
     pub program_counter: u16,
     pub stack_pointer: u16,
     memory: [u8; MEMORY_SIZE],
+    memory_footprint: HashMap<u16, u8>,
+    is_memory_loaded: bool,
 }
 
 impl Default for State {
@@ -273,6 +275,7 @@ impl State {
         for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
             self.set_value_at_memory_location(memory_address as u16, *memory_value);
         }
+        self.is_memory_loaded = true;
     }
 
     #[cfg_attr(test, mutate)]
@@ -288,6 +291,14 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn set_value_at_memory_location(&mut self, memory_address: u16, value: u8) {
         self.memory[memory_address as usize] = value;
+
+        if self.is_memory_loaded {
+            if value == 0 {
+                self.memory_footprint.remove(&memory_address);
+            } else {
+                self.memory_footprint.insert(memory_address, value);
+            }
+        }
     }
 
     #[cfg_attr(test, mutate)]
@@ -373,11 +384,17 @@ impl State {
 
         operation.run_operation(self, additional_byte_1, additional_byte_2);
 
+        const DISPLAY_MEMORY_FOOTPRINT: bool = false;
+
         if operation != Operation::Nop {
             println!(
                 "## {:04X?}, {:04X?}, {:?}, {:?} ##",
                 self.program_counter, self.stack_pointer, self.registers, self.condition_flags
             );
+
+            if DISPLAY_MEMORY_FOOTPRINT {
+                println!("## {:?} ##", self.memory_footprint);
+            }
         }
     }
 }
@@ -468,6 +485,8 @@ impl StateBuilder {
             program_counter: self.program_counter.unwrap_or(0x0000),
             stack_pointer: self.stack_pointer.unwrap_or(0x0000),
             memory,
+            memory_footprint: HashMap::new(),
+            is_memory_loaded: false,
         }
     }
 }
