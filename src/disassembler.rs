@@ -23,6 +23,9 @@ pub enum Operation {
     Dcr(Register),
     Inx(RegisterPair),
     Dcx(RegisterPair),
+    Dad(RegisterPair),
+    Cmp(Register),
+    Cpi,
     Jmp,
     Jcond(Condition),
     Call,
@@ -49,6 +52,7 @@ impl Operation {
             Operation::Sta => 2,
             Operation::Lhld => 2,
             Operation::Shld => 2,
+            Operation::Cpi => 1,
             Operation::Jmp => 2,
             Operation::Jcond(_) => 2,
             Operation::Call => 2,
@@ -64,12 +68,26 @@ impl Operation {
         additional_byte_2: Option<u8>,
     ) {
         match self {
+            Operation::Mov(source_register, destination_register) => {
+                crate::transfer_instructions::mov_instruction(
+                    state,
+                    *source_register,
+                    *destination_register,
+                )
+            }
             Operation::MovToMem(register) => {
                 crate::transfer_instructions::mov_to_mem_instruction(state, *register)
+            }
+            Operation::MovFromMem(register) => {
+                crate::transfer_instructions::mov_from_mem_instruction(state, *register)
             }
             Operation::Mvi(register) => crate::transfer_instructions::mvi_instruction(
                 state,
                 *register,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::MviMem => crate::transfer_instructions::mvi_mem_instruction(
+                state,
                 additional_byte_1.unwrap() as i8,
             ),
             Operation::Lxi(register_pair) => crate::transfer_instructions::lxi_instruction(
@@ -81,6 +99,10 @@ impl Operation {
             Operation::Ldax(register_pair) => {
                 crate::transfer_instructions::ldax_instruction(state, *register_pair)
             }
+            Operation::Stax(register_pair) => {
+                crate::transfer_instructions::stax_instruction(state, *register_pair)
+            }
+            Operation::Xchg => crate::transfer_instructions::xchg_instruction(state),
             Operation::Inr(register) => {
                 crate::arithmetic_instructions::inr_instruction(state, *register)
             }
@@ -93,6 +115,16 @@ impl Operation {
             Operation::Dcx(register_pair) => {
                 crate::arithmetic_instructions::dcx_instruction(state, *register_pair)
             }
+            Operation::Dad(_) => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Cmp(register) => {
+                crate::logical_instructions::cmp_instruction(state, *register)
+            }
+            Operation::Cpi => crate::logical_instructions::cpi_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
             Operation::Jmp => crate::branch_instructions::jmp_instruction(
                 state,
                 additional_byte_1.unwrap(),
@@ -118,6 +150,12 @@ impl Operation {
             Operation::Ret => crate::branch_instructions::ret_instruction(state),
             Operation::Rcond(condition) => {
                 crate::branch_instructions::rcond_instruction(state, *condition)
+            }
+            Operation::Push(_) => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Pop(_) => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Nop => (),
             _ => todo!("Running of instruction not yet implemented"),
@@ -292,6 +330,18 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_011_011 => Operation::Dcx(RegisterPair::DE),
         0b00_101_011 => Operation::Dcx(RegisterPair::HL),
         0b00_111_011 => Operation::Dcx(RegisterPair::SP),
+        0b00_001_001 => Operation::Dad(RegisterPair::BC),
+        0b00_011_001 => Operation::Dad(RegisterPair::DE),
+        0b00_101_001 => Operation::Dad(RegisterPair::HL),
+        0b00_111_001 => Operation::Dad(RegisterPair::SP),
+        0b10_111_000 => Operation::Cmp(Register::B),
+        0b10_111_001 => Operation::Cmp(Register::C),
+        0b10_111_010 => Operation::Cmp(Register::D),
+        0b10_111_011 => Operation::Cmp(Register::E),
+        0b10_111_100 => Operation::Cmp(Register::H),
+        0b10_111_101 => Operation::Cmp(Register::L),
+        0b10_111_111 => Operation::Cmp(Register::A),
+        0b11_111_110 => Operation::Cpi,
         0b11_000_011 => Operation::Jmp,
         0b11_000_010 => Operation::Jcond((ConditionFlag::Zero, false)),
         0b11_001_010 => Operation::Jcond((ConditionFlag::Zero, true)),
@@ -541,30 +591,6 @@ mod tests {
     }
 
     #[test]
-    fn disassembler_handles_nop() {
-        let operation = crate::disassembler::disassemble_op_code(0b00_000_000);
-        assert_operation_equals_expected(&operation, &Operation::Nop);
-    }
-
-    #[test]
-    fn disassembler_handles_hlt() {
-        let operation = crate::disassembler::disassemble_op_code(0b01_110_110);
-        assert_operation_equals_expected(&operation, &Operation::Hlt);
-    }
-
-    #[test]
-    fn disassembler_handles_di() {
-        let operation = crate::disassembler::disassemble_op_code(0b11_110_011);
-        assert_operation_equals_expected(&operation, &Operation::Di);
-    }
-
-    #[test]
-    fn disassembler_handles_ei() {
-        let operation = crate::disassembler::disassemble_op_code(0b11_111_011);
-        assert_operation_equals_expected(&operation, &Operation::Ei);
-    }
-
-    #[test]
     fn disassembler_handles_add() {
         let register_map = get_all_registers_for_op_codes(0b10_000_000, 0);
 
@@ -582,6 +608,72 @@ mod tests {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Sub(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_inr() {
+        let register_map = get_all_registers_for_op_codes(0b00_000_100, 3);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Inr(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_dcr() {
+        let register_map = get_all_registers_for_op_codes(0b00_000_101, 3);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Dcr(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_inx() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_011, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Inx(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_dcx() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_011, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Dcx(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_dad() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_001, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Dad(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_cmp() {
+        let register_map = get_all_registers_for_op_codes(0b10_111_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Cmp(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_cpi() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_111_110);
+        assert_operation_equals_expected(&operation, &Operation::Cpi);
     }
 
     #[test]
@@ -633,46 +725,6 @@ mod tests {
     }
 
     #[test]
-    fn disassembler_handles_inr() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_100, 3);
-
-        for (op_code, register) in register_map {
-            let operation = crate::disassembler::disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Inr(register));
-        }
-    }
-
-    #[test]
-    fn disassembler_handles_dcr() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_101, 3);
-
-        for (op_code, register) in register_map {
-            let operation = crate::disassembler::disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Dcr(register));
-        }
-    }
-
-    #[test]
-    fn disassembler_handles_inx() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_011, 4);
-
-        for (op_code, register_pair) in register_pair_map {
-            let operation = crate::disassembler::disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Inx(register_pair));
-        }
-    }
-
-    #[test]
-    fn disassembler_handles_dcx() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_011, 4);
-
-        for (op_code, register_pair) in register_pair_map {
-            let operation = crate::disassembler::disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Dcx(register_pair));
-        }
-    }
-
-    #[test]
     fn disassembler_handles_push() {
         let register_pair_map =
             get_all_register_pairs_for_op_codes_with_exclusions(0b11_000_101, 4, vec![0b11]);
@@ -704,5 +756,29 @@ mod tests {
     fn disassembler_handles_pop_psw() {
         let operation = crate::disassembler::disassemble_op_code(0b11_110_001);
         assert_operation_equals_expected(&operation, &Operation::PopPsw);
+    }
+
+    #[test]
+    fn disassembler_handles_ei() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_111_011);
+        assert_operation_equals_expected(&operation, &Operation::Ei);
+    }
+
+    #[test]
+    fn disassembler_handles_di() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_110_011);
+        assert_operation_equals_expected(&operation, &Operation::Di);
+    }
+
+    #[test]
+    fn disassembler_handles_hlt() {
+        let operation = crate::disassembler::disassemble_op_code(0b01_110_110);
+        assert_operation_equals_expected(&operation, &Operation::Hlt);
+    }
+
+    #[test]
+    fn disassembler_handles_nop() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_000_000);
+        assert_operation_equals_expected(&operation, &Operation::Nop);
     }
 }
