@@ -151,36 +151,50 @@ mod tests {
         );
     }
 
+    fn get_all_combinations_for_op_codes<F, T>(
+        base_op_code: u8,
+        lowest_bit_offset: u8,
+        bit_patterns: Vec<u8>,
+        combination_function: F,
+    ) -> HashMap<u8, T>
+    where
+        F: Fn(u8) -> T,
+    {
+        let mut combination_map = HashMap::with_capacity(bit_patterns.len());
+
+        for bit_pattern in bit_patterns {
+            let op_code = base_op_code | bit_pattern << lowest_bit_offset;
+            let combination = combination_function(bit_pattern);
+            combination_map.insert(op_code, combination);
+        }
+
+        combination_map
+    }
+
     fn get_all_registers_for_op_codes(
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, Register> {
-        let bit_patterns = [0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b111];
-        let mut register_map = HashMap::with_capacity(bit_patterns.len());
-
-        for bit_pattern in bit_patterns {
-            let op_code = base_op_code | bit_pattern << lowest_bit_offset;
-            let register = get_register_from_bit_pattern(bit_pattern);
-            register_map.insert(op_code, register);
-        }
-
-        register_map
+        let bit_patterns = vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b111];
+        get_all_combinations_for_op_codes(
+            base_op_code,
+            lowest_bit_offset,
+            bit_patterns,
+            |bit_pattern| get_register_from_bit_pattern(bit_pattern),
+        )
     }
 
     fn get_all_conditions_for_op_codes(
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, Condition> {
-        let bit_patterns = [0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111];
-        let mut condition_map = HashMap::with_capacity(bit_patterns.len());
-
-        for bit_pattern in bit_patterns {
-            let op_code = base_op_code | bit_pattern << lowest_bit_offset;
-            let condition = get_condition_from_bit_pattern(bit_pattern);
-            condition_map.insert(op_code, condition);
-        }
-
-        condition_map
+        let bit_patterns = vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111];
+        get_all_combinations_for_op_codes(
+            base_op_code,
+            lowest_bit_offset,
+            bit_patterns,
+            |bit_pattern| get_condition_from_bit_pattern(bit_pattern),
+        )
     }
 
     #[test]
