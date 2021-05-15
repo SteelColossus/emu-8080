@@ -32,14 +32,16 @@ pub enum Operation {
     Ccond(Condition),
     Ret,
     Rcond(Condition),
-    Ei,
-    Di,
-    Hlt,
-    Nop,
     Push(RegisterPair),
     PushPsw,
     Pop(RegisterPair),
     PopPsw,
+    In,
+    Out,
+    Ei,
+    Di,
+    Hlt,
+    Nop,
 }
 
 impl Operation {
@@ -57,6 +59,8 @@ impl Operation {
             Operation::Jcond(_) => 2,
             Operation::Call => 2,
             Operation::Ccond(_) => 2,
+            Operation::In => 1,
+            Operation::Out => 1,
             _ => 0,
         }
     }
@@ -155,6 +159,12 @@ impl Operation {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Pop(_) => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::In => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Out => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Nop => (),
@@ -369,10 +379,6 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_101_000 => Operation::Rcond((ConditionFlag::Parity, true)),
         0b11_110_000 => Operation::Rcond((ConditionFlag::Sign, false)),
         0b11_111_000 => Operation::Rcond((ConditionFlag::Sign, true)),
-        0b11_111_011 => Operation::Ei,
-        0b11_110_011 => Operation::Di,
-        0b01_110_110 => Operation::Hlt,
-        0b00_000_000 => Operation::Nop,
         0b11_000_101 => Operation::Push(RegisterPair::BC),
         0b11_010_101 => Operation::Push(RegisterPair::DE),
         0b11_100_101 => Operation::Push(RegisterPair::HL),
@@ -381,6 +387,12 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_010_001 => Operation::Pop(RegisterPair::DE),
         0b11_100_001 => Operation::Pop(RegisterPair::HL),
         0b11_110_001 => Operation::PopPsw,
+        0b11_011_011 => Operation::In,
+        0b11_010_011 => Operation::Out,
+        0b11_111_011 => Operation::Ei,
+        0b11_110_011 => Operation::Di,
+        0b01_110_110 => Operation::Hlt,
+        0b00_000_000 => Operation::Nop,
         _ => panic!("Unrecognized opcode: {:#010b}", op_code),
     }
 }
@@ -756,6 +768,18 @@ mod tests {
     fn disassembler_handles_pop_psw() {
         let operation = crate::disassembler::disassemble_op_code(0b11_110_001);
         assert_operation_equals_expected(&operation, &Operation::PopPsw);
+    }
+
+    #[test]
+    fn disassembler_handles_in() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_011_011);
+        assert_operation_equals_expected(&operation, &Operation::In);
+    }
+
+    #[test]
+    fn disassembler_handles_out() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_010_011);
+        assert_operation_equals_expected(&operation, &Operation::Out);
     }
 
     #[test]
