@@ -195,6 +195,14 @@ fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_110_011 => Operation::Di,
         0b01_110_110 => Operation::Hlt,
         0b00_000_000 => Operation::Nop,
+        0b11_000_101 => Operation::Push(RegisterPair::BC),
+        0b11_010_101 => Operation::Push(RegisterPair::DE),
+        0b11_100_101 => Operation::Push(RegisterPair::HL),
+        0b11_110_101 => Operation::PushPsw,
+        0b11_000_001 => Operation::Pop(RegisterPair::BC),
+        0b11_010_001 => Operation::Pop(RegisterPair::DE),
+        0b11_100_001 => Operation::Pop(RegisterPair::HL),
+        0b11_110_001 => Operation::PopPsw,
         _ => panic!("Unrecognized opcode: {:#010b}", op_code),
     }
 }
@@ -267,7 +275,16 @@ mod tests {
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, RegisterPair> {
-        let bit_patterns = vec![0b00, 0b01, 0b10, 0b11];
+        get_all_register_pairs_for_op_codes_with_exclusions(base_op_code, lowest_bit_offset, Vec::new())
+    }
+
+    fn get_all_register_pairs_for_op_codes_with_exclusions(
+        base_op_code: u8,
+        lowest_bit_offset: u8,
+        exclusions: Vec<u8>,
+    ) -> HashMap<u8, RegisterPair> {
+        let mut bit_patterns = vec![0b00, 0b01, 0b10, 0b11];
+        bit_patterns.retain(|bp| !exclusions.contains(bp));
         get_all_combinations_for_op_codes(
             base_op_code,
             lowest_bit_offset,
@@ -365,18 +382,22 @@ mod tests {
 
     #[test]
     fn disassembler_handles_ldax() {
-        let operation_bc = crate::disassembler::disassemble_op_code(0b00_001_010);
-        assert_operation_equals_expected(&operation_bc, &Operation::Ldax(RegisterPair::BC));
-        let operation_de = crate::disassembler::disassemble_op_code(0b00_011_010);
-        assert_operation_equals_expected(&operation_de, &Operation::Ldax(RegisterPair::DE));
+        let register_pair_map = get_all_register_pairs_for_op_codes_with_exclusions(0b00_001_010, 4, vec![0b10, 0b11]);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Ldax(register_pair));
+        }
     }
 
     #[test]
     fn disassembler_handles_stax() {
-        let operation_bc = crate::disassembler::disassemble_op_code(0b00_000_010);
-        assert_operation_equals_expected(&operation_bc, &Operation::Stax(RegisterPair::BC));
-        let operation_de = crate::disassembler::disassemble_op_code(0b00_010_010);
-        assert_operation_equals_expected(&operation_de, &Operation::Stax(RegisterPair::DE));
+        let register_pair_map = get_all_register_pairs_for_op_codes_with_exclusions(0b00_000_010, 4, vec![0b10, 0b11]);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Stax(register_pair));
+        }
     }
 
     #[test]
@@ -463,5 +484,37 @@ mod tests {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Dcx(register_pair));
         }
+    }
+    
+    #[test]
+    fn disassembler_handles_push() {
+        let register_pair_map = get_all_register_pairs_for_op_codes_with_exclusions(0b11_000_101, 4, vec![0b11]);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Push(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_push_psw() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_110_101);
+        assert_operation_equals_expected(&operation, &Operation::PushPsw);
+    }
+
+    #[test]
+    fn disassembler_handles_pop() {
+        let register_pair_map = get_all_register_pairs_for_op_codes_with_exclusions(0b11_000_001, 4, vec![0b11]);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Pop(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_pop_psw() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_110_001);
+        assert_operation_equals_expected(&operation, &Operation::PopPsw);
     }
 }
