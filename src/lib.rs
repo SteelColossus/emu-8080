@@ -388,12 +388,12 @@ impl State {
 
         if operation != Operation::Nop {
             println!(
-                "## {:04X?}, {:04X?}, {:?}, {:?} ##",
+                "## pc: {:04X?}, sp: {:04X?}, registers: {:?}, {:?} ##",
                 self.program_counter, self.stack_pointer, self.registers, self.condition_flags
             );
 
             if DISPLAY_MEMORY_FOOTPRINT {
-                println!("## {:?} ##", self.memory_footprint);
+                println!("## memory: {:?} ##", self.memory_footprint);
             }
         }
     }
