@@ -2,10 +2,12 @@ pub mod arithmetic_instructions;
 #[cfg(test)]
 pub mod base_test_functions;
 pub mod branch_instructions;
+pub mod disassembler;
 pub mod logical_instructions;
 pub mod stack_instructions;
 pub mod transfer_instructions;
 
+use crate::disassembler::Operation;
 use maplit::hashmap;
 #[cfg(test)]
 use mutagen::mutate;
@@ -73,7 +75,7 @@ pub enum Register {
 
 pub type RegisterState = HashMap<Register, i8>;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum RegisterPair {
     BC,
     DE,
@@ -159,7 +161,7 @@ pub enum ConditionFlag {
 
 pub type Condition = (ConditionFlag, bool);
 
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ConditionFlags {
     pub zero: bool,
     pub sign: bool,
@@ -267,8 +269,20 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
+    pub fn load_memory(&mut self, contiguous_memory_bytes: Vec<u8>) {
+        for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
+            self.set_value_at_memory_location(memory_address as u16, *memory_value);
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
     pub fn get_value_at_memory_location(&self, memory_address: u16) -> u8 {
         self.memory[memory_address as usize]
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_memory_value_at_program_counter(&self) -> u8 {
+        self.get_value_at_memory_location(self.program_counter)
     }
 
     #[cfg_attr(test, mutate)]
@@ -324,6 +338,47 @@ impl State {
     pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
         let register_value = self.get_register_value(register);
         self.set_condition_flags_from_result(register_value);
+    }
+
+    pub fn run_operation(&mut self, operation: Operation) {
+        let op_code_pc = self.program_counter;
+        self.program_counter += 1;
+
+        let mut additional_byte_1 = None;
+        let mut additional_byte_2 = None;
+        let num_additional_bytes = operation.num_additional_bytes();
+
+        if num_additional_bytes >= 1 {
+            additional_byte_1 = Some(self.get_memory_value_at_program_counter());
+            self.program_counter += 1;
+        }
+
+        if num_additional_bytes >= 2 {
+            additional_byte_2 = Some(self.get_memory_value_at_program_counter());
+            self.program_counter += 1;
+        }
+
+        if let (Some(byte_1), Some(byte_2)) = (additional_byte_1, additional_byte_2) {
+            println!(
+                "{:04X?} {:?} {:04X?}",
+                op_code_pc,
+                operation,
+                bit_operations::concat_low_high_bytes(byte_1, byte_2)
+            );
+        } else if let Some(byte_1) = additional_byte_1 {
+            println!("{:04X?} {:?} {:02X?}", op_code_pc, operation, byte_1);
+        } else {
+            println!("{:04X?} {:?}", op_code_pc, operation);
+        }
+
+        operation.run_operation(self, additional_byte_1, additional_byte_2);
+
+        if operation != Operation::Nop {
+            println!(
+                "## {:04X?}, {:04X?}, {:?}, {:?} ##",
+                self.program_counter, self.stack_pointer, self.registers, self.condition_flags
+            );
+        }
     }
 }
 
