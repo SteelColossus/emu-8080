@@ -1,9 +1,9 @@
-use crate::{Condition, ConditionFlag, Register, RegisterPair};
+use emu_8080::{Condition, ConditionFlag, Register, RegisterPair};
 #[cfg(test)]
 use mutagen::mutate;
 
 #[derive(Debug, Eq, PartialEq)]
-enum Operation {
+pub enum Operation {
     Mov(Register, Register),
     MovFromMem(Register),
     MovToMem(Register),
@@ -27,6 +27,27 @@ enum Operation {
     Di,
     Hlt,
     Nop,
+    Push(RegisterPair),
+    PushPsw,
+    Pop(RegisterPair),
+    PopPsw,
+}
+
+impl Operation {
+    pub fn num_additional_bytes(&self) -> u8 {
+        match self {
+            Operation::Mvi(_) => 1,
+            Operation::MviMem => 1,
+            Operation::Lxi(_) => 2,
+            Operation::Lda => 2,
+            Operation::Sta => 2,
+            Operation::Lhld => 2,
+            Operation::Shld => 2,
+            Operation::Jmp => 2,
+            Operation::Jcond(_) => 2,
+            _ => 0,
+        }
+    }
 }
 
 #[cfg_attr(test, mutate)]
@@ -74,7 +95,7 @@ fn get_register_pair_from_bit_pattern(bit_pattern: u8) -> RegisterPair {
 
 #[allow(clippy::unusual_byte_groupings)]
 #[cfg_attr(test, mutate)]
-fn disassemble_op_code(op_code: u8) -> Operation {
+pub fn disassemble_op_code(op_code: u8) -> Operation {
     match op_code {
         0b01_000_000 => Operation::Mov(Register::B, Register::B),
         0b01_000_001 => Operation::Mov(Register::C, Register::B),
@@ -214,7 +235,7 @@ mod tests {
         get_condition_from_bit_pattern, get_register_from_bit_pattern,
         get_register_pair_from_bit_pattern, Operation,
     };
-    use crate::{Condition, Register, RegisterPair};
+    use emu_8080::{Condition, Register, RegisterPair};
     use std::collections::HashMap;
 
     fn assert_operation_equals_expected(operation: &Operation, expected_operation: &Operation) {

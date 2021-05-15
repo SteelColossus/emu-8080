@@ -2,7 +2,6 @@ pub mod arithmetic_instructions;
 #[cfg(test)]
 pub mod base_test_functions;
 pub mod branch_instructions;
-mod disassembler;
 pub mod logical_instructions;
 pub mod stack_instructions;
 pub mod transfer_instructions;
