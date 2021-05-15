@@ -45,6 +45,16 @@ pub fn sphl_instruction(state: &mut State) {
     state.stack_pointer = RegisterPair::HL.get_full_value(&state);
 }
 
+#[cfg_attr(test, mutate)]
+pub fn ei_instruction(state: &mut State) {
+    state.are_interrupts_enabled = true;
+}
+
+#[cfg_attr(test, mutate)]
+pub fn di_instruction(state: &mut State) {
+    state.are_interrupts_enabled = false;
+}
+
 #[cfg(test)]
 mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
@@ -114,5 +124,29 @@ mod tests {
                 .stack_pointer(0x0A9C)
                 .build(),
         );
+    }
+    
+    #[test]
+    fn ei_sets_interrupts_as_enabled() {
+        let mut state = State::default();
+        crate::stack_instructions::ei_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .are_interrupts_enabled(true)
+                .build(),
+        )
+    }
+
+    #[test]
+    fn di_sets_interrupts_as_disabled() {
+        let mut state = StateBuilder::default()
+            .are_interrupts_enabled(true)
+            .build();
+        crate::stack_instructions::di_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &State::default(),
+        )
     }
 }

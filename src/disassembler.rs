@@ -262,10 +262,10 @@ impl Operation {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Ei => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+                crate::stack_instructions::ei_instruction(state)
             }
             Operation::Di => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+                crate::stack_instructions::di_instruction(state)
             }
             Operation::Hlt => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")

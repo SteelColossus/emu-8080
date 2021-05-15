@@ -221,6 +221,7 @@ pub struct State {
     pub program_counter: u16,
     pub stack_pointer: u16,
     memory: [u8; MEMORY_SIZE],
+    pub are_interrupts_enabled: bool,
     memory_footprint: HashMap<u16, u8>,
     is_memory_loaded: bool,
 }
@@ -406,6 +407,7 @@ pub struct StateBuilder {
     program_counter: Option<u16>,
     stack_pointer: Option<u16>,
     memory_values: Option<HashMap<u16, u8>>,
+    are_interrupts_enabled: Option<bool>,
 }
 
 impl StateBuilder {
@@ -447,6 +449,12 @@ impl StateBuilder {
         new
     }
 
+    pub fn are_interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
+        let mut new = self;
+        new.are_interrupts_enabled = Some(are_interrupts_enabled);
+        new
+    }
+
     #[cfg_attr(test, mutate)]
     pub fn build(&self) -> State {
         let mut registers = hashmap! {
@@ -485,6 +493,7 @@ impl StateBuilder {
             program_counter: self.program_counter.unwrap_or(0x0000),
             stack_pointer: self.stack_pointer.unwrap_or(0x0000),
             memory,
+            are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
             memory_footprint: HashMap::new(),
             is_memory_loaded: false,
         }

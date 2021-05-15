@@ -90,11 +90,21 @@ fn assert_memory_location_contains_value(state: &State, memory_address: u16, exp
     );
 }
 
+fn assert_interrupts_enabled_state(state: &State, expected_interrupts_are_enabled: bool) {
+    let actual_interrupts_are_enabled = state.are_interrupts_enabled;
+    assert_eq!(
+        actual_interrupts_are_enabled, expected_interrupts_are_enabled,
+        "Expected interrupts enabled to be {}, but instead it was {}",
+        expected_interrupts_are_enabled, actual_interrupts_are_enabled
+    );
+}
+
 pub fn assert_state_is_as_expected(actual_state: &State, expected_state: &State) {
     assert_values_of_registers(actual_state, expected_state.get_register_state());
     assert_values_of_condition_flags(actual_state, expected_state.get_condition_flag_state());
     assert_program_counter_has_value(actual_state, expected_state.program_counter);
     assert_stack_pointer_has_value(actual_state, expected_state.stack_pointer);
+    assert_interrupts_enabled_state(actual_state, expected_state.are_interrupts_enabled);
     for mem_add in 0..MEMORY_SIZE {
         let memory_address = mem_add as u16;
         let expected_value = expected_state.get_value_at_memory_location(memory_address);
