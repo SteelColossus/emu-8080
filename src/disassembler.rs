@@ -45,6 +45,7 @@ fn get_condition_from_bit_pattern(bit_pattern: u8) -> Condition {
     }
 }
 
+#[allow(clippy::unusual_byte_groupings)]
 #[cfg_attr(test, mutate)]
 fn disassemble_op_code(op_code: u8) -> Operation {
     match op_code {
@@ -135,6 +136,7 @@ fn disassemble_op_code(op_code: u8) -> Operation {
     }
 }
 
+#[allow(clippy::unusual_byte_groupings)]
 #[cfg(test)]
 mod tests {
     use crate::disassembler::{
@@ -180,7 +182,7 @@ mod tests {
             base_op_code,
             lowest_bit_offset,
             bit_patterns,
-            |bit_pattern| get_register_from_bit_pattern(bit_pattern),
+            get_register_from_bit_pattern,
         )
     }
 
@@ -193,7 +195,7 @@ mod tests {
             base_op_code,
             lowest_bit_offset,
             bit_patterns,
-            |bit_pattern| get_condition_from_bit_pattern(bit_pattern),
+            get_condition_from_bit_pattern,
         )
     }
 
