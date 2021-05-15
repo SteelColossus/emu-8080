@@ -18,14 +18,28 @@ pub enum Operation {
     Stax(RegisterPair),
     Xchg,
     Add(Register),
+    Adi,
+    Aci,
     Sub(Register),
+    Sui,
+    Sbi,
     Inr(Register),
     Dcr(Register),
     Inx(RegisterPair),
     Dcx(RegisterPair),
     Dad(RegisterPair),
     Cmp(Register),
+    Ana(Register),
+    Ani,
+    Xra(Register),
+    Xri,
+    Ora(Register),
+    Ori,
     Cpi,
+    Rlc,
+    Rrc,
+    Ral,
+    Rar,
     Jmp,
     Jcond(Condition),
     Call,
@@ -54,6 +68,13 @@ impl Operation {
             Operation::Sta => 2,
             Operation::Lhld => 2,
             Operation::Shld => 2,
+            Operation::Adi => 1,
+            Operation::Aci => 1,
+            Operation::Sui => 1,
+            Operation::Sbi => 1,
+            Operation::Ani => 1,
+            Operation::Xri => 1,
+            Operation::Ori => 1,
             Operation::Cpi => 1,
             Operation::Jmp => 2,
             Operation::Jcond(_) => 2,
@@ -100,6 +121,26 @@ impl Operation {
                 additional_byte_1.unwrap() as i8,
                 additional_byte_2.unwrap() as i8,
             ),
+            Operation::Lda => crate::transfer_instructions::lda_instruction(
+                state,
+                additional_byte_1.unwrap(),
+                additional_byte_2.unwrap(),
+            ),
+            Operation::Sta => crate::transfer_instructions::sta_instruction(
+                state,
+                additional_byte_1.unwrap(),
+                additional_byte_2.unwrap(),
+            ),
+            Operation::Lhld => crate::transfer_instructions::lhld_instruction(
+                state,
+                additional_byte_1.unwrap(),
+                additional_byte_2.unwrap(),
+            ),
+            Operation::Shld => crate::transfer_instructions::shld_instruction(
+                state,
+                additional_byte_1.unwrap(),
+                additional_byte_2.unwrap(),
+            ),
             Operation::Ldax(register_pair) => {
                 crate::transfer_instructions::ldax_instruction(state, *register_pair)
             }
@@ -107,6 +148,28 @@ impl Operation {
                 crate::transfer_instructions::stax_instruction(state, *register_pair)
             }
             Operation::Xchg => crate::transfer_instructions::xchg_instruction(state),
+            Operation::Add(register) => {
+                crate::arithmetic_instructions::add_instruction(state, *register)
+            }
+            Operation::Adi => crate::arithmetic_instructions::adi_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::Aci => crate::arithmetic_instructions::aci_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::Sub(register) => {
+                crate::arithmetic_instructions::sub_instruction(state, *register)
+            }
+            Operation::Sui => crate::arithmetic_instructions::sui_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::Sbi => crate::arithmetic_instructions::sbi_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
             Operation::Inr(register) => {
                 crate::arithmetic_instructions::inr_instruction(state, *register)
             }
@@ -125,10 +188,35 @@ impl Operation {
             Operation::Cmp(register) => {
                 crate::logical_instructions::cmp_instruction(state, *register)
             }
+            Operation::Ana(register) => {
+                crate::logical_instructions::ana_instruction(state, *register)
+            }
+            Operation::Ani => crate::logical_instructions::ani_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::Xra(register) => {
+                crate::logical_instructions::xra_instruction(state, *register)
+            }
+            Operation::Xri => crate::logical_instructions::xri_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
+            Operation::Ora(register) => {
+                crate::logical_instructions::ora_instruction(state, *register)
+            }
+            Operation::Ori => crate::logical_instructions::ori_instruction(
+                state,
+                additional_byte_1.unwrap() as i8,
+            ),
             Operation::Cpi => crate::logical_instructions::cpi_instruction(
                 state,
                 additional_byte_1.unwrap() as i8,
             ),
+            Operation::Rlc => crate::logical_instructions::rlc_instruction(state),
+            Operation::Rrc => crate::logical_instructions::rrc_instruction(state),
+            Operation::Ral => crate::logical_instructions::ral_instruction(state),
+            Operation::Rar => crate::logical_instructions::rar_instruction(state),
             Operation::Jmp => crate::branch_instructions::jmp_instruction(
                 state,
                 additional_byte_1.unwrap(),
@@ -161,10 +249,25 @@ impl Operation {
             Operation::Pop(register_pair) => {
                 crate::stack_instructions::pop_instruction(state, *register_pair)
             }
+            Operation::PushPsw => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::PopPsw => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
             Operation::In => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Out => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Ei => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Di => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
+            }
+            Operation::Hlt => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --")
             }
             Operation::Nop => (),
@@ -311,6 +414,8 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_000_100 => Operation::Add(Register::H),
         0b10_000_101 => Operation::Add(Register::L),
         0b10_000_111 => Operation::Add(Register::A),
+        0b11_000_110 => Operation::Adi,
+        0b11_001_110 => Operation::Aci,
         0b10_010_000 => Operation::Sub(Register::B),
         0b10_010_001 => Operation::Sub(Register::C),
         0b10_010_010 => Operation::Sub(Register::D),
@@ -318,6 +423,8 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_010_100 => Operation::Sub(Register::H),
         0b10_010_101 => Operation::Sub(Register::L),
         0b10_010_111 => Operation::Sub(Register::A),
+        0b11_010_110 => Operation::Sui,
+        0b11_011_110 => Operation::Sbi,
         0b00_000_100 => Operation::Inr(Register::B),
         0b00_001_100 => Operation::Inr(Register::C),
         0b00_010_100 => Operation::Inr(Register::D),
@@ -351,7 +458,35 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_111_100 => Operation::Cmp(Register::H),
         0b10_111_101 => Operation::Cmp(Register::L),
         0b10_111_111 => Operation::Cmp(Register::A),
+        0b10_100_000 => Operation::Ana(Register::B),
+        0b10_100_001 => Operation::Ana(Register::C),
+        0b10_100_010 => Operation::Ana(Register::D),
+        0b10_100_011 => Operation::Ana(Register::E),
+        0b10_100_100 => Operation::Ana(Register::H),
+        0b10_100_101 => Operation::Ana(Register::L),
+        0b10_100_111 => Operation::Ana(Register::A),
+        0b11_100_110 => Operation::Ani,
+        0b10_101_000 => Operation::Xra(Register::B),
+        0b10_101_001 => Operation::Xra(Register::C),
+        0b10_101_010 => Operation::Xra(Register::D),
+        0b10_101_011 => Operation::Xra(Register::E),
+        0b10_101_100 => Operation::Xra(Register::H),
+        0b10_101_101 => Operation::Xra(Register::L),
+        0b10_101_111 => Operation::Xra(Register::A),
+        0b11_101_110 => Operation::Xri,
+        0b10_110_000 => Operation::Ora(Register::B),
+        0b10_110_001 => Operation::Ora(Register::C),
+        0b10_110_010 => Operation::Ora(Register::D),
+        0b10_110_011 => Operation::Ora(Register::E),
+        0b10_110_100 => Operation::Ora(Register::H),
+        0b10_110_101 => Operation::Ora(Register::L),
+        0b10_110_111 => Operation::Ora(Register::A),
+        0b11_110_110 => Operation::Ori,
         0b11_111_110 => Operation::Cpi,
+        0b00_000_111 => Operation::Rlc,
+        0b00_001_111 => Operation::Rrc,
+        0b00_010_111 => Operation::Ral,
+        0b00_011_111 => Operation::Rar,
         0b11_000_011 => Operation::Jmp,
         0b11_000_010 => Operation::Jcond((ConditionFlag::Zero, false)),
         0b11_001_010 => Operation::Jcond((ConditionFlag::Zero, true)),
@@ -613,6 +748,18 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_adi() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_000_110);
+        assert_operation_equals_expected(&operation, &Operation::Adi);
+    }
+
+    #[test]
+    fn disassembler_handles_aci() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_001_110);
+        assert_operation_equals_expected(&operation, &Operation::Aci);
+    }
+
+    #[test]
     fn disassembler_handles_sub() {
         let register_map = get_all_registers_for_op_codes(0b10_010_000, 0);
 
@@ -620,6 +767,18 @@ mod tests {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Sub(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_sui() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_010_110);
+        assert_operation_equals_expected(&operation, &Operation::Sui);
+    }
+
+    #[test]
+    fn disassembler_handles_sbi() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_011_110);
+        assert_operation_equals_expected(&operation, &Operation::Sbi);
     }
 
     #[test]
@@ -683,9 +842,81 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_ana() {
+        let register_map = get_all_registers_for_op_codes(0b10_100_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Ana(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_ani() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_100_110);
+        assert_operation_equals_expected(&operation, &Operation::Ani);
+    }
+
+    #[test]
+    fn disassembler_handles_xra() {
+        let register_map = get_all_registers_for_op_codes(0b10_101_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Xra(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_xri() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_101_110);
+        assert_operation_equals_expected(&operation, &Operation::Xri);
+    }
+
+    #[test]
+    fn disassembler_handles_ora() {
+        let register_map = get_all_registers_for_op_codes(0b10_110_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Ora(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_ori() {
+        let operation = crate::disassembler::disassemble_op_code(0b11_110_110);
+        assert_operation_equals_expected(&operation, &Operation::Ori);
+    }
+
+    #[test]
     fn disassembler_handles_cpi() {
         let operation = crate::disassembler::disassemble_op_code(0b11_111_110);
         assert_operation_equals_expected(&operation, &Operation::Cpi);
+    }
+
+    #[test]
+    fn disassembler_handles_rlc() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_000_111);
+        assert_operation_equals_expected(&operation, &Operation::Rlc);
+    }
+
+    #[test]
+    fn disassembler_handles_rrc() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_001_111);
+        assert_operation_equals_expected(&operation, &Operation::Rrc);
+    }
+
+    #[test]
+    fn disassembler_handles_ral() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_010_111);
+        assert_operation_equals_expected(&operation, &Operation::Ral);
+    }
+
+    #[test]
+    fn disassembler_handles_rar() {
+        let operation = crate::disassembler::disassemble_op_code(0b00_011_111);
+        assert_operation_equals_expected(&operation, &Operation::Rar);
     }
 
     #[test]

@@ -20,11 +20,11 @@ pub fn ani_instruction(state: &mut State, data: i8) {
 #[cfg_attr(test, mutate)]
 pub fn ora_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.get_register_value(source_register);
-    oni_instruction(state, source_register_value);
+    ori_instruction(state, source_register_value);
 }
 
 #[cfg_attr(test, mutate)]
-pub fn oni_instruction(state: &mut State, data: i8) {
+pub fn ori_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value | target_value
     });
@@ -35,11 +35,11 @@ pub fn oni_instruction(state: &mut State, data: i8) {
 #[cfg_attr(test, mutate)]
 pub fn xra_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.get_register_value(source_register);
-    xni_instruction(state, source_register_value);
+    xri_instruction(state, source_register_value);
 }
 
 #[cfg_attr(test, mutate)]
-pub fn xni_instruction(state: &mut State, data: i8) {
+pub fn xri_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value ^ target_value
     });
@@ -254,11 +254,11 @@ mod tests {
     }
 
     #[test]
-    fn oni_logically_ors_the_accumulator_with_the_given_value() {
+    fn ori_logically_ors_the_accumulator_with_the_given_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::oni_instruction(&mut state, 0b01100011);
+        crate::logical_instructions::ori_instruction(&mut state, 0b01100011);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -271,11 +271,11 @@ mod tests {
     }
 
     #[test]
-    fn oni_clears_the_carry_flag() {
+    fn ori_clears_the_carry_flag() {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::oni_instruction(&mut state, 0b00000000);
+        crate::logical_instructions::ori_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -335,11 +335,11 @@ mod tests {
     }
 
     #[test]
-    fn xni_logically_xors_the_accumulator_with_the_given_value() {
+    fn xri_logically_xors_the_accumulator_with_the_given_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::xni_instruction(&mut state, 0b01100011);
+        crate::logical_instructions::xri_instruction(&mut state, 0b01100011);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -352,11 +352,11 @@ mod tests {
     }
 
     #[test]
-    fn xni_clears_the_carry_flag() {
+    fn xri_clears_the_carry_flag() {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::xni_instruction(&mut state, 0b00000000);
+        crate::logical_instructions::xri_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
