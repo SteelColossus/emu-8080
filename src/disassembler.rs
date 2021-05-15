@@ -1,4 +1,4 @@
-use crate::{Condition, ConditionFlag, Register};
+use crate::{Condition, ConditionFlag, Register, RegisterPair};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -14,6 +14,8 @@ enum Operation {
     Mov(Register, Register),
     Jmp,
     Jcond(Condition),
+    Inx(RegisterPair),
+    Dcx(RegisterPair),
 }
 
 #[cfg_attr(test, mutate)]
@@ -26,7 +28,7 @@ fn get_register_from_bit_pattern(bit_pattern: u8) -> Register {
         0b100 => Register::H,
         0b101 => Register::L,
         0b111 => Register::A,
-        _ => panic!("Invalid bit pattern of {:#b}", bit_pattern),
+        _ => panic!("Invalid bit pattern of {:#b} for register", bit_pattern),
     }
 }
 
@@ -41,7 +43,21 @@ fn get_condition_from_bit_pattern(bit_pattern: u8) -> Condition {
         0b101 => (ConditionFlag::Parity, true),
         0b110 => (ConditionFlag::Sign, false),
         0b111 => (ConditionFlag::Sign, true),
-        _ => panic!("Invalid bit pattern of {:#b}", bit_pattern),
+        _ => panic!("Invalid bit pattern of {:#b} for condition", bit_pattern),
+    }
+}
+
+#[cfg_attr(test, mutate)]
+fn get_register_pair_from_bit_pattern(bit_pattern: u8) -> RegisterPair {
+    match bit_pattern {
+        0b00 => RegisterPair::BC,
+        0b01 => RegisterPair::DE,
+        0b10 => RegisterPair::HL,
+        0b11 => RegisterPair::SP,
+        _ => panic!(
+            "Invalid bit pattern of {:#b} for register pair",
+            bit_pattern,
+        ),
     }
 }
 
@@ -128,6 +144,14 @@ fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_101_010 => Operation::Jcond((ConditionFlag::Parity, true)),
         0b11_110_010 => Operation::Jcond((ConditionFlag::Sign, false)),
         0b11_111_010 => Operation::Jcond((ConditionFlag::Sign, true)),
+        0b00_000_011 => Operation::Inx(RegisterPair::BC),
+        0b00_010_011 => Operation::Inx(RegisterPair::DE),
+        0b00_100_011 => Operation::Inx(RegisterPair::HL),
+        0b00_110_011 => Operation::Inx(RegisterPair::SP),
+        0b00_001_011 => Operation::Dcx(RegisterPair::BC),
+        0b00_011_011 => Operation::Dcx(RegisterPair::DE),
+        0b00_101_011 => Operation::Dcx(RegisterPair::HL),
+        0b00_111_011 => Operation::Dcx(RegisterPair::SP),
         0b00_000_000 => Operation::Nop,
         0b01_110_110 => Operation::Hlt,
         0b11_110_011 => Operation::Di,
@@ -140,9 +164,10 @@ fn disassemble_op_code(op_code: u8) -> Operation {
 #[cfg(test)]
 mod tests {
     use crate::disassembler::{
-        get_condition_from_bit_pattern, get_register_from_bit_pattern, Operation,
+        get_condition_from_bit_pattern, get_register_from_bit_pattern,
+        get_register_pair_from_bit_pattern, Operation,
     };
-    use crate::{Condition, Register};
+    use crate::{Condition, Register, RegisterPair};
     use std::collections::HashMap;
 
     fn assert_operation_equals_expected(operation: &Operation, expected_operation: &Operation) {
@@ -196,6 +221,19 @@ mod tests {
             lowest_bit_offset,
             bit_patterns,
             get_condition_from_bit_pattern,
+        )
+    }
+
+    fn get_all_register_pairs_for_op_codes(
+        base_op_code: u8,
+        lowest_bit_offset: u8,
+    ) -> HashMap<u8, RegisterPair> {
+        let bit_patterns = vec![0b00, 0b01, 0b10, 0b11];
+        get_all_combinations_for_op_codes(
+            base_op_code,
+            lowest_bit_offset,
+            bit_patterns,
+            get_register_pair_from_bit_pattern,
         )
     }
 
@@ -283,6 +321,26 @@ mod tests {
         for (op_code, condition) in condition_map {
             let operation = crate::disassembler::disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Jcond(condition));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_inx() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_011, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Inx(register_pair));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_dcx() {
+        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_011, 4);
+
+        for (op_code, register_pair) in register_pair_map {
+            let operation = crate::disassembler::disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Dcx(register_pair));
         }
     }
 }
