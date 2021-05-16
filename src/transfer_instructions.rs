@@ -1,4 +1,4 @@
-use crate::{Register, RegisterPair, State};
+use crate::{bit_operations, Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -44,21 +44,21 @@ pub fn lxi_instruction(
 
 #[cfg_attr(test, mutate)]
 pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let memory_location_value = state.get_value_at_memory_location(memory_address);
     state.set_register(Register::A, memory_location_value as i8);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.get_register_value(Register::A);
     state.set_value_at_memory_location(memory_address, accumulator_value as u8);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let first_memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    let first_memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
     let first_memory_value = state.get_value_at_memory_location(first_memory_address);
     let second_memory_value = state.get_value_at_memory_location(second_memory_address);
@@ -68,7 +68,7 @@ pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let first_memory_address = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    let first_memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
     let h_register_value = state.get_register_value(Register::H) as u8;
     let l_register_value = state.get_register_value(Register::L) as u8;
@@ -112,14 +112,15 @@ pub fn xchg_instruction(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{Register, RegisterPair, State, StateBuilder};
+    use crate::StateBuilder;
     use maplit::hashmap;
 
     #[test]
     fn mvi_loads_data_into_one_register() {
         let mut state = State::default();
-        crate::transfer_instructions::mvi_instruction(&mut state, Register::A, 64);
+        mvi_instruction(&mut state, Register::A, 64);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -131,8 +132,8 @@ mod tests {
     #[test]
     fn mvi_loads_data_into_multiple_registers() {
         let mut state = State::default();
-        crate::transfer_instructions::mvi_instruction(&mut state, Register::B, 1);
-        crate::transfer_instructions::mvi_instruction(&mut state, Register::D, 127);
+        mvi_instruction(&mut state, Register::B, 1);
+        mvi_instruction(&mut state, Register::D, 127);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -146,7 +147,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 62, Register::L => 13 })
             .build();
-        crate::transfer_instructions::mvi_mem_instruction(&mut state, -64);
+        mvi_mem_instruction(&mut state, -64);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -161,7 +162,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 99 })
             .build();
-        crate::transfer_instructions::mov_instruction(&mut state, Register::H, Register::A);
+        mov_instruction(&mut state, Register::H, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -175,7 +176,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::L => 121 })
             .build();
-        crate::transfer_instructions::mov_instruction(&mut state, Register::L, Register::L);
+        mov_instruction(&mut state, Register::L, Register::L);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -189,9 +190,9 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 91 })
             .build();
-        crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::C);
-        crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::E);
-        crate::transfer_instructions::mov_instruction(&mut state, Register::A, Register::L);
+        mov_instruction(&mut state, Register::A, Register::C);
+        mov_instruction(&mut state, Register::A, Register::E);
+        mov_instruction(&mut state, Register::A, Register::L);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -211,7 +212,7 @@ mod tests {
             .register_values(hashmap! { Register::H => 80, Register::L => -103 })
             .memory_values(hashmap! { 0x5099 => 187 })
             .build();
-        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::B);
+        mov_from_mem_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -228,7 +229,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0x0000 => 128 })
             .build();
-        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::D);
+        mov_from_mem_instruction(&mut state, Register::D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -243,7 +244,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => -43, Register::L => 75, Register::E => 48 })
             .build();
-        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::E);
+        mov_from_mem_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -258,7 +259,7 @@ mod tests {
             .register_values(hashmap! { Register::H => -27, Register::L => 4 })
             .memory_values(hashmap! { 0xE503 => 76, 0xE504 => 179, 0xE505 => 148 })
             .build();
-        crate::transfer_instructions::mov_from_mem_instruction(&mut state, Register::L);
+        mov_from_mem_instruction(&mut state, Register::L);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -273,7 +274,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 117, Register::L => 35, Register::C => 63 })
             .build();
-        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::C);
+        mov_to_mem_instruction(&mut state, Register::C);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -291,7 +292,7 @@ mod tests {
             .register_values(hashmap! { Register::H => 72, Register::L => -56 })
             .memory_values(hashmap! { 0x48C7 => 53, 0x48C8 => 235, 0x48C9 => 159 })
             .build();
-        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::A);
+        mov_to_mem_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -306,7 +307,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::B => 18 })
             .build();
-        crate::transfer_instructions::mov_to_mem_instruction(&mut state, Register::B);
+        mov_to_mem_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -319,7 +320,7 @@ mod tests {
     #[test]
     fn lxi_loads_the_given_data_into_the_given_register_pair() {
         let mut state = State::default();
-        crate::transfer_instructions::lxi_instruction(&mut state, RegisterPair::BC, 96, -29);
+        lxi_instruction(&mut state, RegisterPair::BC, 96, -29);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -331,7 +332,7 @@ mod tests {
     #[test]
     fn lxi_loads_the_given_data_into_the_stack_pointer() {
         let mut state = State::default();
-        crate::transfer_instructions::lxi_instruction(&mut state, RegisterPair::SP, -57, 77);
+        lxi_instruction(&mut state, RegisterPair::SP, -57, 77);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default().stack_pointer(0x4DC7).build(),
@@ -343,7 +344,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0x0040 => 214 })
             .build();
-        crate::transfer_instructions::lda_instruction(&mut state, 0x40, 0x00);
+        lda_instruction(&mut state, 0x40, 0x00);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -358,7 +359,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => -42 })
             .build();
-        crate::transfer_instructions::sta_instruction(&mut state, 0x99, 0x01);
+        sta_instruction(&mut state, 0x99, 0x01);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -373,7 +374,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0x592B => 100, 0x592C => 176 })
             .build();
-        crate::transfer_instructions::lhld_instruction(&mut state, 0x2B, 0x59);
+        lhld_instruction(&mut state, 0x2B, 0x59);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -388,7 +389,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0xFFFF => 89, 0x0000 => 187 })
             .build();
-        crate::transfer_instructions::lhld_instruction(&mut state, 0xFF, 0xFF);
+        lhld_instruction(&mut state, 0xFF, 0xFF);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -403,7 +404,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 106, Register::L => -22 })
             .build();
-        crate::transfer_instructions::shld_instruction(&mut state, 0xFF, 0xD3);
+        shld_instruction(&mut state, 0xFF, 0xD3);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -418,7 +419,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => -96, Register::L => 69 })
             .build();
-        crate::transfer_instructions::shld_instruction(&mut state, 0xFF, 0xFF);
+        shld_instruction(&mut state, 0xFF, 0xFF);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -434,7 +435,7 @@ mod tests {
             .register_values(hashmap! { Register::D => 43, Register::E => -26 })
             .memory_values(hashmap! { 0x2BE5 => 27, 0x2BE6 => 107, 0x2BE7 => 243})
             .build();
-        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::DE);
+        ldax_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -451,7 +452,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0x0000 => 101 })
             .build();
-        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::BC);
+        ldax_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -466,7 +467,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::B => 47, Register::C => 31, Register::A => -9 })
             .build();
-        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::BC);
+        ldax_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -479,14 +480,14 @@ mod tests {
     #[should_panic(expected = "The register pair HL is not supported by the LDAX operation")]
     fn ldax_does_not_support_the_hl_register_pair() {
         let mut state = State::default();
-        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::HL);
+        ldax_instruction(&mut state, RegisterPair::HL);
     }
 
     #[test]
     #[should_panic(expected = "The register pair SP is not supported by the LDAX operation")]
     fn ldax_does_not_support_the_sp_register_pair() {
         let mut state = State::default();
-        crate::transfer_instructions::ldax_instruction(&mut state, RegisterPair::SP);
+        ldax_instruction(&mut state, RegisterPair::SP);
     }
 
     #[test]
@@ -494,7 +495,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => -96, Register::E => 17, Register::A => -34 })
             .build();
-        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::DE);
+        stax_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -511,7 +512,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 107 })
             .build();
-        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::DE);
+        stax_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -527,7 +528,7 @@ mod tests {
             .register_values(hashmap! { Register::B => -38, Register::C => 15 })
             .memory_values(hashmap! { 0xDA0F => 174 })
             .build();
-        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::BC);
+        stax_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -540,14 +541,14 @@ mod tests {
     #[should_panic(expected = "The register pair HL is not supported by the STAX operation")]
     fn stax_does_not_support_the_hl_register_pair() {
         let mut state = State::default();
-        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::HL);
+        stax_instruction(&mut state, RegisterPair::HL);
     }
 
     #[test]
     #[should_panic(expected = "The register pair SP is not supported by the STAX operation")]
     fn stax_does_not_support_the_sp_register_pair() {
         let mut state = State::default();
-        crate::transfer_instructions::stax_instruction(&mut state, RegisterPair::SP);
+        stax_instruction(&mut state, RegisterPair::SP);
     }
 
     #[test]
@@ -559,7 +560,7 @@ mod tests {
                 Register::L => 11,
             })
             .build();
-        crate::transfer_instructions::xchg_instruction(&mut state);
+        xchg_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()

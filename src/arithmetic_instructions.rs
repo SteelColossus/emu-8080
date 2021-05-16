@@ -113,14 +113,15 @@ pub fn sbi_instruction(state: &mut State, data: i8) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{ConditionFlag, Register, RegisterPair, State, StateBuilder};
+    use crate::{ConditionFlag, StateBuilder};
     use maplit::hashmap;
 
     #[test]
     fn inr_increments_default_register_value() {
         let mut state = State::default();
-        crate::arithmetic_instructions::inr_instruction(&mut state, Register::C);
+        inr_instruction(&mut state, Register::C);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -134,7 +135,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::E => 63 })
             .build();
-        crate::arithmetic_instructions::inr_instruction(&mut state, Register::E);
+        inr_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -148,7 +149,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::C => 127 })
             .build();
-        crate::arithmetic_instructions::inr_instruction(&mut state, Register::C);
+        inr_instruction(&mut state, Register::C);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -164,7 +165,7 @@ mod tests {
             .register_values(hashmap! { Register::H => -124, Register::L => 55 })
             .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 8, 0x8438 => 109 })
             .build();
-        crate::arithmetic_instructions::inr_mem_instruction(&mut state);
+        inr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -181,7 +182,7 @@ mod tests {
             .register_values(hashmap! { Register::H => 21, Register::L => 91 })
             .memory_values(hashmap! { 0x155B => 255 })
             .build();
-        crate::arithmetic_instructions::inr_mem_instruction(&mut state);
+        inr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -197,7 +198,7 @@ mod tests {
     #[test]
     fn dcr_decrements_default_register_value() {
         let mut state = State::default();
-        crate::arithmetic_instructions::dcr_instruction(&mut state, Register::C);
+        dcr_instruction(&mut state, Register::C);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -214,7 +215,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::E => 127 })
             .build();
-        crate::arithmetic_instructions::dcr_instruction(&mut state, Register::E);
+        dcr_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -229,7 +230,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::C => -128 })
             .build();
-        crate::arithmetic_instructions::dcr_instruction(&mut state, Register::C);
+        dcr_instruction(&mut state, Register::C);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -244,7 +245,7 @@ mod tests {
             .register_values(hashmap! { Register::H => -65, Register::L => -102 })
             .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 233, 0xBF9B => 83 })
             .build();
-        crate::arithmetic_instructions::dcr_mem_instruction(&mut state);
+        dcr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -263,7 +264,7 @@ mod tests {
             .register_values(hashmap! { Register::H => 56, Register::L => -50 })
             .memory_values(hashmap! { 0x38CE => 0 })
             .build();
-        crate::arithmetic_instructions::dcr_mem_instruction(&mut state);
+        dcr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -281,7 +282,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => 47, Register::E => -115 })
             .build();
-        crate::arithmetic_instructions::inx_instruction(&mut state, RegisterPair::DE);
+        inx_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -295,7 +296,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => -52, Register::L => -1 })
             .build();
-        crate::arithmetic_instructions::inx_instruction(&mut state, RegisterPair::HL);
+        inx_instruction(&mut state, RegisterPair::HL);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -309,7 +310,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 81, Register::L => -122 })
             .build();
-        crate::arithmetic_instructions::dcx_instruction(&mut state, RegisterPair::HL);
+        dcx_instruction(&mut state, RegisterPair::HL);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -323,7 +324,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => -107, Register::E => 0 })
             .build();
-        crate::arithmetic_instructions::dcx_instruction(&mut state, RegisterPair::DE);
+        dcx_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -337,7 +338,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::B => 117, Register::C => -88, Register::H => 75, Register::L => 43 })
             .build();
-        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::BC);
+        dad_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -351,7 +352,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 32, Register::L => -81 })
             .build();
-        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::HL);
+        dad_instruction(&mut state, RegisterPair::HL);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -366,7 +367,7 @@ mod tests {
             .register_values(hashmap! { Register::H => -96, Register::L => 6 })
             .stack_pointer(0x13FE)
             .build();
-        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::SP);
+        dad_instruction(&mut state, RegisterPair::SP);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -381,7 +382,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => -110, Register::E => -48, Register::H => 109, Register::L => 48 })
             .build();
-        crate::arithmetic_instructions::dad_instruction(&mut state, RegisterPair::DE);
+        dad_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -396,7 +397,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::D => 24 })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::D);
+        add_instruction(&mut state, Register::D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -411,9 +412,9 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::B => 31 })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
+        add_instruction(&mut state, Register::B);
+        add_instruction(&mut state, Register::B);
+        add_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -431,9 +432,9 @@ mod tests {
                 Register::D => 15,
             })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::C);
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::D);
+        add_instruction(&mut state, Register::B);
+        add_instruction(&mut state, Register::C);
+        add_instruction(&mut state, Register::D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -453,7 +454,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => -102, Register::E => 95 })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::E);
+        add_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -470,8 +471,8 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 31 })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
+        add_instruction(&mut state, Register::A);
+        add_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -483,7 +484,7 @@ mod tests {
     #[test]
     fn add_sets_condition_flag_zero_to_true_if_result_is_zero() {
         let mut state = State::default();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::A);
+        add_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -499,14 +500,14 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 78, Register::E => 91 })
             .build();
-        crate::arithmetic_instructions::add_instruction(&mut state, Register::E);
+        add_instruction(&mut state, Register::E);
         assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::E => 91, Register::A => -87 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build());
     }
 
     #[test]
     fn adi_adds_the_given_value_onto_the_default_accumulator_value() {
         let mut state = State::default();
-        crate::arithmetic_instructions::adi_instruction(&mut state, 64);
+        adi_instruction(&mut state, 64);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -520,7 +521,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 90 })
             .build();
-        crate::arithmetic_instructions::adi_instruction(&mut state, 37);
+        adi_instruction(&mut state, 37);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -532,7 +533,7 @@ mod tests {
     #[test]
     fn adi_sets_condition_flag_zero_to_true_if_result_is_zero() {
         let mut state = State::default();
-        crate::arithmetic_instructions::adi_instruction(&mut state, 0);
+        adi_instruction(&mut state, 0);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -548,7 +549,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 87 })
             .build();
-        crate::arithmetic_instructions::adi_instruction(&mut state, 74);
+        adi_instruction(&mut state, 74);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -565,7 +566,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 38, Register::B => 44 })
             .build();
-        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        adc_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -580,7 +581,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 38, Register::B => 44 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        adc_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -596,7 +597,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 100, Register::B => 127 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        adc_instruction(&mut state, Register::B);
         assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => -28, Register::B => 127 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build())
     }
 
@@ -606,7 +607,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 96, Register::B => 31 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::adc_instruction(&mut state, Register::B);
+        adc_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -623,7 +624,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 38 })
             .build();
-        crate::arithmetic_instructions::aci_instruction(&mut state, 44);
+        aci_instruction(&mut state, 44);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -638,7 +639,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 38 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::aci_instruction(&mut state, 44);
+        aci_instruction(&mut state, 44);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -654,7 +655,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 100 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::aci_instruction(&mut state, 127);
+        aci_instruction(&mut state, 127);
         assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => -28 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build())
     }
 
@@ -664,7 +665,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 96 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::aci_instruction(&mut state, 31);
+        aci_instruction(&mut state, 31);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -681,7 +682,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 127, Register::D => 24 })
             .build();
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::D);
+        sub_instruction(&mut state, Register::D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -695,9 +696,9 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 127, Register::B => 42 })
             .build();
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
+        sub_instruction(&mut state, Register::B);
+        sub_instruction(&mut state, Register::B);
+        sub_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -716,9 +717,9 @@ mod tests {
                 Register::D => 15,
             })
             .build();
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::B);
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::C);
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::D);
+        sub_instruction(&mut state, Register::B);
+        sub_instruction(&mut state, Register::C);
+        sub_instruction(&mut state, Register::D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -737,7 +738,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 63 })
             .build();
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::A);
+        sub_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -754,7 +755,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => -74, Register::E => 87 })
             .build();
-        crate::arithmetic_instructions::sub_instruction(&mut state, Register::E);
+        sub_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -771,7 +772,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 66 })
             .build();
-        crate::arithmetic_instructions::sui_instruction(&mut state, 55);
+        sui_instruction(&mut state, 55);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -785,7 +786,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 75 })
             .build();
-        crate::arithmetic_instructions::sui_instruction(&mut state, 75);
+        sui_instruction(&mut state, 75);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -801,7 +802,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => -74 })
             .build();
-        crate::arithmetic_instructions::sui_instruction(&mut state, 87);
+        sui_instruction(&mut state, 87);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -818,7 +819,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 88, Register::B => 77 })
             .build();
-        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        sbb_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -833,7 +834,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 88, Register::B => 77 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        sbb_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -849,7 +850,7 @@ mod tests {
             .register_values(hashmap! { Register::A => -100, Register::B => 127 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        sbb_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -865,7 +866,7 @@ mod tests {
             .register_values(hashmap! { Register::A => -97, Register::B => 31 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbb_instruction(&mut state, Register::B);
+        sbb_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -880,7 +881,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 88 })
             .build();
-        crate::arithmetic_instructions::sbi_instruction(&mut state, 77);
+        sbi_instruction(&mut state, 77);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -895,7 +896,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 88 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbi_instruction(&mut state, 77);
+        sbi_instruction(&mut state, 77);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -911,7 +912,7 @@ mod tests {
             .register_values(hashmap! { Register::A => -100 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbi_instruction(&mut state, 127);
+        sbi_instruction(&mut state, 127);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -927,7 +928,7 @@ mod tests {
             .register_values(hashmap! { Register::A => -97 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::arithmetic_instructions::sbi_instruction(&mut state, 31);
+        sbi_instruction(&mut state, 31);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()

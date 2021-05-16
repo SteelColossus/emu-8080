@@ -57,8 +57,9 @@ pub fn di_instruction(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{Register, RegisterPair, State, StateBuilder};
+    use crate::{Register, StateBuilder};
     use maplit::hashmap;
 
     #[test]
@@ -67,7 +68,7 @@ mod tests {
             .register_values(hashmap! { Register::B => -35, Register::C => 101 })
             .stack_pointer(0xF028)
             .build();
-        crate::stack_instructions::push_instruction(&mut state, RegisterPair::BC);
+        push_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -82,7 +83,7 @@ mod tests {
     #[should_panic(expected = "The register pair SP is not supported by the PUSH operation")]
     fn push_does_not_support_stack_pointer_as_given_register_pair() {
         let mut state = State::default();
-        crate::stack_instructions::push_instruction(&mut state, RegisterPair::SP);
+        push_instruction(&mut state, RegisterPair::SP);
     }
 
     #[test]
@@ -91,7 +92,7 @@ mod tests {
             .stack_pointer(0x8CCD)
             .memory_values(hashmap! { 0x8CCC => 102, 0x8CCD => 40, 0x8CCE => 204, 0x8CCF => 16 })
             .build();
-        crate::stack_instructions::pop_instruction(&mut state, RegisterPair::DE);
+        pop_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -108,7 +109,7 @@ mod tests {
     #[should_panic(expected = "The register pair SP is not supported by the POP operation")]
     fn pop_does_not_support_stack_pointer_as_given_register_pair() {
         let mut state = State::default();
-        crate::stack_instructions::pop_instruction(&mut state, RegisterPair::SP);
+        pop_instruction(&mut state, RegisterPair::SP);
     }
 
     #[test]
@@ -116,7 +117,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 10, Register::L => -100 })
             .build();
-        crate::stack_instructions::sphl_instruction(&mut state);
+        sphl_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -129,7 +130,7 @@ mod tests {
     #[test]
     fn ei_sets_interrupts_as_enabled() {
         let mut state = State::default();
-        crate::stack_instructions::ei_instruction(&mut state);
+        ei_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default().are_interrupts_enabled(true).build(),
@@ -139,7 +140,7 @@ mod tests {
     #[test]
     fn di_sets_interrupts_as_disabled() {
         let mut state = StateBuilder::default().are_interrupts_enabled(true).build();
-        crate::stack_instructions::di_instruction(&mut state);
+        di_instruction(&mut state);
         assert_state_is_as_expected(&state, &State::default())
     }
 }

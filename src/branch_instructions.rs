@@ -1,4 +1,4 @@
-use crate::{Condition, ConditionFlag, RegisterPair, State};
+use crate::{bit_operations, Condition, ConditionFlag, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -16,7 +16,7 @@ fn is_condition_flag_set(state: &State, condition: Condition, base_instruction: 
 
 #[cfg_attr(test, mutate)]
 pub fn jmp_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    state.program_counter = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    state.program_counter = bit_operations::concat_low_high_bytes(low_data, high_data);
 }
 
 #[cfg_attr(test, mutate)]
@@ -28,13 +28,13 @@ pub fn jcond_instruction(state: &mut State, low_data: u8, high_data: u8, conditi
 
 #[cfg_attr(test, mutate)]
 pub fn call_instruction(state: &mut State, low_data: u8, high_data: u8) {
-    let (pc_low, pc_high) = crate::bit_operations::split_to_low_high_bytes(state.program_counter);
+    let (pc_low, pc_high) = bit_operations::split_to_low_high_bytes(state.program_counter);
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     state.set_value_at_memory_location(sp_minus_one, pc_high);
     state.set_value_at_memory_location(sp_minus_two, pc_low);
     state.stack_pointer = sp_minus_two;
-    state.program_counter = crate::bit_operations::concat_low_high_bytes(low_data, high_data);
+    state.program_counter = bit_operations::concat_low_high_bytes(low_data, high_data);
 }
 
 #[cfg_attr(test, mutate)]
@@ -51,7 +51,7 @@ pub fn ret_instruction(state: &mut State) {
     let value_for_pc_low = state.get_value_at_memory_location(state.stack_pointer);
     let value_for_pc_high = state.get_value_at_memory_location(sp_plus_one);
     state.program_counter =
-        crate::bit_operations::concat_low_high_bytes(value_for_pc_low, value_for_pc_high);
+        bit_operations::concat_low_high_bytes(value_for_pc_low, value_for_pc_high);
     state.stack_pointer = sp_plus_two;
 }
 
@@ -78,14 +78,15 @@ pub fn pchl_instruction(state: &mut State) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{ConditionFlag, Register, State, StateBuilder};
+    use crate::{Register, StateBuilder};
     use maplit::hashmap;
 
     #[test]
     fn jmp_sets_the_program_counter_to_the_given_value() {
         let mut state = State::default();
-        crate::branch_instructions::jmp_instruction(&mut state, 0x0D, 0xD0);
+        jmp_instruction(&mut state, 0x0D, 0xD0);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default().program_counter(0xD00D).build(),
@@ -95,12 +96,7 @@ mod tests {
     #[test]
     fn jcond_sets_the_program_counter_when_condition_is_true() {
         let mut state = State::default();
-        crate::branch_instructions::jcond_instruction(
-            &mut state,
-            0xFF,
-            0xFF,
-            (ConditionFlag::Zero, false),
-        );
+        jcond_instruction(&mut state, 0xFF, 0xFF, (ConditionFlag::Zero, false));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default().program_counter(0xFFFF).build(),
@@ -110,12 +106,7 @@ mod tests {
     #[test]
     fn jcond_does_not_set_the_program_counter_when_condition_is_false() {
         let mut state = State::default();
-        crate::branch_instructions::jcond_instruction(
-            &mut state,
-            0xFF,
-            0xFF,
-            (ConditionFlag::Zero, true),
-        );
+        jcond_instruction(&mut state, 0xFF, 0xFF, (ConditionFlag::Zero, true));
         assert_state_is_as_expected(&state, &State::default());
     }
 
@@ -124,12 +115,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::branch_instructions::jcond_instruction(
-            &mut state,
-            0x0F,
-            0x00,
-            (ConditionFlag::Carry, true),
-        );
+        jcond_instruction(&mut state, 0x0F, 0x00, (ConditionFlag::Carry, true));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -145,7 +131,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
             .build();
-        crate::branch_instructions::jcond_instruction(
+        jcond_instruction(
             &mut state,
             0x0D,
             0xF0,
@@ -159,7 +145,7 @@ mod tests {
             .program_counter(0x33FA)
             .stack_pointer(0x77E1)
             .build();
-        crate::branch_instructions::call_instruction(&mut state, 0x6F, 0x7B);
+        call_instruction(&mut state, 0x6F, 0x7B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -176,7 +162,7 @@ mod tests {
             .program_counter(0x40E0)
             .stack_pointer(0x0001)
             .build();
-        crate::branch_instructions::call_instruction(&mut state, 0x0D, 0x4E);
+        call_instruction(&mut state, 0x0D, 0x4E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -192,7 +178,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .memory_values(hashmap! { 0xFFFD => 208, 0xFFFE => 146, 0xFFFF => 80, 0x0000 => 73 })
             .build();
-        crate::branch_instructions::call_instruction(&mut state, 0xB3, 0x2D);
+        call_instruction(&mut state, 0xB3, 0x2D);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -210,12 +196,7 @@ mod tests {
             .stack_pointer(0x77E1)
             .condition_flag_values(hashmap! { ConditionFlag::Zero => true })
             .build();
-        crate::branch_instructions::ccond_instruction(
-            &mut state,
-            0x6F,
-            0x7B,
-            (ConditionFlag::Zero, true),
-        );
+        ccond_instruction(&mut state, 0x6F, 0x7B, (ConditionFlag::Zero, true));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -234,12 +215,7 @@ mod tests {
             .stack_pointer(0x77E1)
             .condition_flag_values(hashmap! { ConditionFlag::Zero => true })
             .build();
-        crate::branch_instructions::ccond_instruction(
-            &mut state,
-            0x6F,
-            0x7B,
-            (ConditionFlag::Zero, false),
-        );
+        ccond_instruction(&mut state, 0x6F, 0x7B, (ConditionFlag::Zero, false));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -256,7 +232,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
             .build();
-        crate::branch_instructions::ccond_instruction(
+        ccond_instruction(
             &mut state,
             0x0D,
             0xF0,
@@ -270,7 +246,7 @@ mod tests {
             .stack_pointer(0xA462)
             .memory_values(hashmap! { 0xA462 => 72, 0xA463 => 201 })
             .build();
-        crate::branch_instructions::ret_instruction(&mut state);
+        ret_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -287,7 +263,7 @@ mod tests {
             .stack_pointer(0xFFFF)
             .memory_values(hashmap! { 0xFFFE => 33, 0xFFFF => 118, 0x0000 => 160, 0x0001 => 155 })
             .build();
-        crate::branch_instructions::ret_instruction(&mut state);
+        ret_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -307,7 +283,7 @@ mod tests {
             .memory_values(hashmap! { 0xA462 => 72, 0xA463 => 201 })
             .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
             .build();
-        crate::branch_instructions::rcond_instruction(&mut state, (ConditionFlag::Parity, true));
+        rcond_instruction(&mut state, (ConditionFlag::Parity, true));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -326,7 +302,7 @@ mod tests {
             .memory_values(hashmap! { 0xA462 => 72, 0xA463 => 201 })
             .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
             .build();
-        crate::branch_instructions::rcond_instruction(&mut state, (ConditionFlag::Parity, false));
+        rcond_instruction(&mut state, (ConditionFlag::Parity, false));
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -341,10 +317,7 @@ mod tests {
     #[should_panic(expected = "The auxiliary carry flag is not a supported condition for RET")]
     fn rcond_does_not_support_auxiliary_carry_as_condition() {
         let mut state = State::default();
-        crate::branch_instructions::rcond_instruction(
-            &mut state,
-            (ConditionFlag::AuxiliaryCarry, true),
-        );
+        rcond_instruction(&mut state, (ConditionFlag::AuxiliaryCarry, true));
     }
 
     #[test]
@@ -353,7 +326,7 @@ mod tests {
             .program_counter(0x1914)
             .stack_pointer(0x9DEC)
             .build();
-        crate::branch_instructions::rst_instruction(&mut state, 7);
+        rst_instruction(&mut state, 7);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -368,7 +341,7 @@ mod tests {
     #[should_panic(expected = "Invalid reset index of 8")]
     fn rst_panics_when_given_an_invalid_reset_index() {
         let mut state = State::default();
-        crate::branch_instructions::rst_instruction(&mut state, 8);
+        rst_instruction(&mut state, 8);
     }
 
     #[test]
@@ -376,7 +349,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => -64, Register::L => 63 })
             .build();
-        crate::branch_instructions::pchl_instruction(&mut state);
+        pchl_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()

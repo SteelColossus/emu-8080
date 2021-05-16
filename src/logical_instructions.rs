@@ -1,4 +1,4 @@
-use crate::{Register, State};
+use crate::{bit_operations, Register, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -69,14 +69,14 @@ pub fn cpi_instruction(state: &mut State, data: i8) {
 pub fn rlc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
     state.set_register(Register::A, accumulator_value.rotate_left(1));
-    state.condition_flags.carry = crate::bit_operations::is_bit_set(accumulator_value, 7);
+    state.condition_flags.carry = bit_operations::is_bit_set(accumulator_value, 7);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn rrc_instruction(state: &mut State) {
     let accumulator_value = state.get_register_value(Register::A);
     state.set_register(Register::A, accumulator_value.rotate_right(1));
-    state.condition_flags.carry = crate::bit_operations::is_bit_set(accumulator_value, 0);
+    state.condition_flags.carry = bit_operations::is_bit_set(accumulator_value, 0);
 }
 
 #[cfg_attr(test, mutate)]
@@ -85,8 +85,8 @@ pub fn ral_instruction(state: &mut State) {
     let previous_carry = state.condition_flags.carry;
     let mut result = accumulator_value.rotate_left(1);
     let bit_index = 0;
-    let carry = crate::bit_operations::is_bit_set(result, bit_index);
-    result = crate::bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
+    let carry = bit_operations::is_bit_set(result, bit_index);
+    result = bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }
@@ -97,8 +97,8 @@ pub fn rar_instruction(state: &mut State) {
     let previous_carry = state.condition_flags.carry;
     let mut result = accumulator_value.rotate_right(1);
     let bit_index = 7;
-    let carry = crate::bit_operations::is_bit_set(result, bit_index);
-    result = crate::bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
+    let carry = bit_operations::is_bit_set(result, bit_index);
+    result = bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }
@@ -122,8 +122,9 @@ pub fn stc_instruction(state: &mut State) {
 #[cfg(test)]
 #[allow(overflowing_literals)]
 mod tests {
+    use super::*;
     use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{ConditionFlag, Register, State, StateBuilder};
+    use crate::{ConditionFlag, StateBuilder};
     use maplit::hashmap;
 
     #[test]
@@ -131,7 +132,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
             .build();
-        crate::logical_instructions::ana_instruction(&mut state, Register::B);
+        ana_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -146,7 +147,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b10100110 })
             .build();
-        crate::logical_instructions::ana_instruction(&mut state, Register::A);
+        ana_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -163,7 +164,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ana_instruction(&mut state, Register::A);
+        ana_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -179,7 +180,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::ani_instruction(&mut state, 0b01100011);
+        ani_instruction(&mut state, 0b01100011);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -194,7 +195,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ani_instruction(&mut state, 0b00000000);
+        ani_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -210,7 +211,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
             .build();
-        crate::logical_instructions::ora_instruction(&mut state, Register::B);
+        ora_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -225,7 +226,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b10100110 })
             .build();
-        crate::logical_instructions::ora_instruction(&mut state, Register::A);
+        ora_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -242,7 +243,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ora_instruction(&mut state, Register::A);
+        ora_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -258,7 +259,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::ori_instruction(&mut state, 0b01100011);
+        ori_instruction(&mut state, 0b01100011);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -275,7 +276,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ori_instruction(&mut state, 0b00000000);
+        ori_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -291,7 +292,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
             .build();
-        crate::logical_instructions::xra_instruction(&mut state, Register::B);
+        xra_instruction(&mut state, Register::B);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -306,7 +307,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b10100110 })
             .build();
-        crate::logical_instructions::xra_instruction(&mut state, Register::A);
+        xra_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -323,7 +324,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::xra_instruction(&mut state, Register::A);
+        xra_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -339,7 +340,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::xri_instruction(&mut state, 0b01100011);
+        xri_instruction(&mut state, 0b01100011);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -356,7 +357,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::xri_instruction(&mut state, 0b00000000);
+        xri_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -372,7 +373,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 36, Register::H => 36 })
             .build();
-        crate::logical_instructions::cmp_instruction(&mut state, Register::H);
+        cmp_instruction(&mut state, Register::H);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -389,7 +390,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 24, Register::E => 48 })
             .build();
-        crate::logical_instructions::cmp_instruction(&mut state, Register::E);
+        cmp_instruction(&mut state, Register::E);
         assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => 24, Register::E => 48 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build());
     }
 
@@ -398,7 +399,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 54 })
             .build();
-        crate::logical_instructions::cpi_instruction(&mut state, 54);
+        cpi_instruction(&mut state, 54);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -414,7 +415,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 36 })
             .build();
-        crate::logical_instructions::cpi_instruction(&mut state, 60);
+        cpi_instruction(&mut state, 60);
         assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => -24 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build());
     }
 
@@ -423,7 +424,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01100011 })
             .build();
-        crate::logical_instructions::rlc_instruction(&mut state);
+        rlc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -437,7 +438,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b10000000 })
             .build();
-        crate::logical_instructions::rlc_instruction(&mut state);
+        rlc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -452,7 +453,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::rrc_instruction(&mut state);
+        rrc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -466,7 +467,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b00000001 })
             .build();
-        crate::logical_instructions::rrc_instruction(&mut state);
+        rrc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -481,7 +482,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::ral_instruction(&mut state);
+        ral_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -496,7 +497,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ral_instruction(&mut state);
+        ral_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -511,7 +512,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 0b10100101 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::ral_instruction(&mut state);
+        ral_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -526,7 +527,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01100011 })
             .build();
-        crate::logical_instructions::rar_instruction(&mut state);
+        rar_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -541,7 +542,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::rar_instruction(&mut state);
+        rar_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -556,7 +557,7 @@ mod tests {
             .register_values(hashmap! { Register::A => 0b10100101 })
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
-        crate::logical_instructions::rar_instruction(&mut state);
+        rar_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -571,7 +572,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
             .build();
-        crate::logical_instructions::cma_instruction(&mut state);
+        cma_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -583,21 +584,21 @@ mod tests {
     #[test]
     fn cmc_inverts_the_carry_flag() {
         let mut state = State::default();
-        crate::logical_instructions::cmc_instruction(&mut state);
+        cmc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
                 .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
                 .build(),
         );
-        crate::logical_instructions::cmc_instruction(&mut state);
+        cmc_instruction(&mut state);
         assert_state_is_as_expected(&state, &State::default());
     }
 
     #[test]
     fn stc_sets_the_carry_flag_to_true() {
         let mut state = State::default();
-        crate::logical_instructions::stc_instruction(&mut state);
+        stc_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()

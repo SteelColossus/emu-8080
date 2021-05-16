@@ -1,66 +1,18 @@
+use std::collections::HashMap;
+
+use maplit::hashmap;
+#[cfg(test)]
+use mutagen::mutate;
+
 pub mod arithmetic_instructions;
 #[cfg(test)]
 pub mod base_test_functions;
+pub mod bit_operations;
 pub mod branch_instructions;
 pub mod disassembler;
 pub mod logical_instructions;
 pub mod stack_instructions;
 pub mod transfer_instructions;
-
-use crate::disassembler::Operation;
-use maplit::hashmap;
-#[cfg(test)]
-use mutagen::mutate;
-use std::collections::HashMap;
-
-pub mod bit_operations {
-    #[cfg(test)]
-    use mutagen::mutate;
-
-    #[cfg_attr(test, mutate)]
-    pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
-        if bit_index >= 8 {
-            panic!("Invalid bit index of {}", bit_index);
-        }
-
-        let shifted_value = value >> bit_index;
-        shifted_value & 0b00000001 != 0
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn get_value_with_bit_set(value: i8, bit_index: u8, bit_flag: bool) -> i8 {
-        if bit_index >= 8 {
-            panic!("Invalid bit index of {}", bit_index);
-        }
-
-        let bit_mask = 1 << bit_index;
-        let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
-        value & !bit_mask | bit_value_mask
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn get_parity(value: i8) -> bool {
-        let mut parity = true;
-
-        for bit_index in 0..=7 {
-            if is_bit_set(value, bit_index) {
-                parity = !parity
-            }
-        }
-
-        parity
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
-        u16::from(high_byte) << 8 | u16::from(low_byte)
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
-        ((value & 0x00FF) as u8, (value >> 8) as u8)
-    }
-}
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Register {
@@ -352,6 +304,7 @@ impl State {
         self.set_condition_flags_from_result(register_value);
     }
 
+    #[cfg_attr(test, mutate)]
     pub fn run_operation(&mut self, operation: Operation) {
         let op_code_pc = self.program_counter;
         self.program_counter += 1;
@@ -500,10 +453,257 @@ impl StateBuilder {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum Operation {
+    Mov(Register, Register),
+    MovFromMem(Register),
+    MovToMem(Register),
+    Mvi(Register),
+    MviMem,
+    Lxi(RegisterPair),
+    Lda,
+    Sta,
+    Lhld,
+    Shld,
+    Ldax(RegisterPair),
+    Stax(RegisterPair),
+    Xchg,
+    Add(Register),
+    Adi,
+    Aci,
+    Sub(Register),
+    Sui,
+    Sbi,
+    Inr(Register),
+    InrMem,
+    Dcr(Register),
+    DcrMem,
+    Inx(RegisterPair),
+    Dcx(RegisterPair),
+    Dad(RegisterPair),
+    Cmp(Register),
+    Ana(Register),
+    Ani,
+    Xra(Register),
+    Xri,
+    Ora(Register),
+    Ori,
+    Cpi,
+    Rlc,
+    Rrc,
+    Ral,
+    Rar,
+    Cmc,
+    Stc,
+    Jmp,
+    Jcond(Condition),
+    Call,
+    Ccond(Condition),
+    Ret,
+    Rcond(Condition),
+    Push(RegisterPair),
+    PushPsw,
+    Pop(RegisterPair),
+    PopPsw,
+    In,
+    Out,
+    Ei,
+    Di,
+    Hlt,
+    Nop,
+}
+
+impl Operation {
+    #[cfg_attr(test, mutate)]
+    pub fn num_additional_bytes(&self) -> u8 {
+        match self {
+            Operation::Mvi(_) => 1,
+            Operation::MviMem => 1,
+            Operation::Lxi(_) => 2,
+            Operation::Lda => 2,
+            Operation::Sta => 2,
+            Operation::Lhld => 2,
+            Operation::Shld => 2,
+            Operation::Adi => 1,
+            Operation::Aci => 1,
+            Operation::Sui => 1,
+            Operation::Sbi => 1,
+            Operation::Ani => 1,
+            Operation::Xri => 1,
+            Operation::Ori => 1,
+            Operation::Cpi => 1,
+            Operation::Jmp => 2,
+            Operation::Jcond(_) => 2,
+            Operation::Call => 2,
+            Operation::Ccond(_) => 2,
+            Operation::In => 1,
+            Operation::Out => 1,
+            _ => 0,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn run_operation(
+        &self,
+        state: &mut State,
+        additional_byte_1: Option<u8>,
+        additional_byte_2: Option<u8>,
+    ) {
+        let mut is_low_data_required = false;
+        let mut is_high_data_required = false;
+
+        let mut get_low_data = || {
+            is_low_data_required = true;
+            additional_byte_1.expect("Expected byte 1 to be present but it was not")
+        };
+
+        let mut get_high_data = || {
+            is_high_data_required = true;
+            additional_byte_2.expect("Expected byte 2 to be present but it was not")
+        };
+
+        match self {
+            Operation::Mov(source_register, destination_register) => {
+                transfer_instructions::mov_instruction(
+                    state,
+                    *source_register,
+                    *destination_register,
+                )
+            }
+            Operation::MovToMem(register) => {
+                transfer_instructions::mov_to_mem_instruction(state, *register)
+            }
+            Operation::MovFromMem(register) => {
+                transfer_instructions::mov_from_mem_instruction(state, *register)
+            }
+            Operation::Mvi(register) => {
+                transfer_instructions::mvi_instruction(state, *register, get_low_data() as i8)
+            }
+            Operation::MviMem => {
+                transfer_instructions::mvi_mem_instruction(state, get_low_data() as i8)
+            }
+            Operation::Lxi(register_pair) => transfer_instructions::lxi_instruction(
+                state,
+                *register_pair,
+                get_low_data() as i8,
+                get_high_data() as i8,
+            ),
+            Operation::Lda => {
+                transfer_instructions::lda_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Sta => {
+                transfer_instructions::sta_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Lhld => {
+                transfer_instructions::lhld_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Shld => {
+                transfer_instructions::shld_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Ldax(register_pair) => {
+                transfer_instructions::ldax_instruction(state, *register_pair)
+            }
+            Operation::Stax(register_pair) => {
+                transfer_instructions::stax_instruction(state, *register_pair)
+            }
+            Operation::Xchg => transfer_instructions::xchg_instruction(state),
+            Operation::Add(register) => arithmetic_instructions::add_instruction(state, *register),
+            Operation::Adi => arithmetic_instructions::adi_instruction(state, get_low_data() as i8),
+            Operation::Aci => arithmetic_instructions::aci_instruction(state, get_low_data() as i8),
+            Operation::Sub(register) => arithmetic_instructions::sub_instruction(state, *register),
+            Operation::Sui => arithmetic_instructions::sui_instruction(state, get_low_data() as i8),
+            Operation::Sbi => arithmetic_instructions::sbi_instruction(state, get_low_data() as i8),
+            Operation::Inr(register) => arithmetic_instructions::inr_instruction(state, *register),
+            Operation::InrMem => arithmetic_instructions::inr_mem_instruction(state),
+            Operation::Dcr(register) => arithmetic_instructions::dcr_instruction(state, *register),
+            Operation::DcrMem => arithmetic_instructions::dcr_mem_instruction(state),
+            Operation::Inx(register_pair) => {
+                arithmetic_instructions::inx_instruction(state, *register_pair)
+            }
+            Operation::Dcx(register_pair) => {
+                arithmetic_instructions::dcx_instruction(state, *register_pair)
+            }
+            Operation::Dad(register_pair) => {
+                arithmetic_instructions::dad_instruction(state, *register_pair)
+            }
+            Operation::Cmp(register) => logical_instructions::cmp_instruction(state, *register),
+            Operation::Ana(register) => logical_instructions::ana_instruction(state, *register),
+            Operation::Ani => logical_instructions::ani_instruction(state, get_low_data() as i8),
+            Operation::Xra(register) => logical_instructions::xra_instruction(state, *register),
+            Operation::Xri => logical_instructions::xri_instruction(state, get_low_data() as i8),
+            Operation::Ora(register) => logical_instructions::ora_instruction(state, *register),
+            Operation::Ori => logical_instructions::ori_instruction(state, get_low_data() as i8),
+            Operation::Cpi => logical_instructions::cpi_instruction(state, get_low_data() as i8),
+            Operation::Rlc => logical_instructions::rlc_instruction(state),
+            Operation::Rrc => logical_instructions::rrc_instruction(state),
+            Operation::Ral => logical_instructions::ral_instruction(state),
+            Operation::Rar => logical_instructions::rar_instruction(state),
+            Operation::Cmc => logical_instructions::cmc_instruction(state),
+            Operation::Stc => logical_instructions::stc_instruction(state),
+            Operation::Jmp => {
+                branch_instructions::jmp_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Jcond(condition) => branch_instructions::jcond_instruction(
+                state,
+                get_low_data(),
+                get_high_data(),
+                *condition,
+            ),
+            Operation::Call => {
+                branch_instructions::call_instruction(state, get_low_data(), get_high_data())
+            }
+            Operation::Ccond(condition) => branch_instructions::ccond_instruction(
+                state,
+                get_low_data(),
+                get_high_data(),
+                *condition,
+            ),
+            Operation::Ret => branch_instructions::ret_instruction(state),
+            Operation::Rcond(condition) => {
+                branch_instructions::rcond_instruction(state, *condition)
+            }
+            Operation::Push(register_pair) => {
+                stack_instructions::push_instruction(state, *register_pair)
+            }
+            Operation::Pop(register_pair) => {
+                stack_instructions::pop_instruction(state, *register_pair)
+            }
+            Operation::PushPsw => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+            }
+            Operation::PopPsw => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+            }
+            Operation::In => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+                get_low_data();
+            }
+            Operation::Out => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+                get_low_data();
+            }
+            Operation::Ei => stack_instructions::ei_instruction(state),
+            Operation::Di => stack_instructions::di_instruction(state),
+            Operation::Hlt => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+            }
+            Operation::Nop => (),
+        };
+
+        if !is_high_data_required && additional_byte_2.is_some() {
+            panic!("Expected byte 2 to not be present but it was");
+        }
+
+        if !is_low_data_required && additional_byte_1.is_some() {
+            panic!("Expected byte 1 to not be present but it was");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::base_test_functions::assert_state_is_as_expected;
-    use crate::{RegisterPair, State, StateBuilder};
+    use super::*;
+    use base_test_functions::assert_state_is_as_expected;
 
     #[test]
     fn can_get_state_of_all_registers() {
@@ -529,12 +729,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn is_bit_set_panics_when_given_an_invalid_bit_index() {
-        crate::bit_operations::is_bit_set(127, 8);
+        bit_operations::is_bit_set(127, 8);
     }
 
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
-        crate::bit_operations::get_value_with_bit_set(127, 8, true);
+        bit_operations::get_value_with_bit_set(127, 8, true);
     }
 }
