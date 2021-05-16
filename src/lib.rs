@@ -208,6 +208,11 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
+    pub fn set_condition_flag_value(&mut self, condition_flag: ConditionFlag, value: bool) {
+        self.condition_flags.set_value(condition_flag, value);
+    }
+
+    #[cfg_attr(test, mutate)]
     fn get_register_mut(&mut self, register: Register) -> &mut i8 {
         self.registers.get_mut(&register).unwrap()
     }
@@ -669,23 +674,38 @@ impl Operation {
                 stack_instructions::pop_instruction(state, *register_pair)
             }
             Operation::PushPsw => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+                stack_instructions::push_psw_instruction(state);
             }
             Operation::PopPsw => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+                stack_instructions::pop_psw_instruction(state);
             }
             Operation::In => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
-                get_low_data();
+                let port_number = get_low_data();
+                match port_number {
+                    1 => {
+                        println!("Port {}", port_number);
+                        state.set_register(Register::A, 0b0000_1000);
+                    }
+                    2 => {
+                        println!("Port {}", port_number);
+                        state.set_register(Register::A, 0b0000_0000);
+                    }
+                    _ => panic!("Can't handle Port {}", port_number),
+                };
             }
             Operation::Out => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
-                get_low_data();
+                let port_number = get_low_data();
+                match port_number {
+                    3 | 5 | 6 => println!("Port {}", port_number),
+                    _ => panic!("Can't handle Port {}", port_number),
+                };
             }
             Operation::Ei => stack_instructions::ei_instruction(state),
             Operation::Di => stack_instructions::di_instruction(state),
             Operation::Hlt => {
-                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+                todo!();
             }
             Operation::Nop => (),
         };
@@ -735,6 +755,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
-        bit_operations::get_value_with_bit_set(127, 8, true);
+        bit_operations::set_bit_in_value(&mut 127, 8, true);
     }
 }

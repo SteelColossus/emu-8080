@@ -60,7 +60,6 @@ pub fn cmp_instruction(state: &mut State, register: Register) {
 pub fn cpi_instruction(state: &mut State, data: i8) {
     let accumulator_value = state.get_register_value(Register::A);
     let result = accumulator_value.wrapping_sub(data);
-    state.set_register(Register::A, result);
     state.set_condition_flags_from_result(result);
     state.condition_flags.carry = accumulator_value < data;
 }
@@ -86,7 +85,7 @@ pub fn ral_instruction(state: &mut State) {
     let mut result = accumulator_value.rotate_left(1);
     let bit_index = 0;
     let carry = bit_operations::is_bit_set(result, bit_index);
-    result = bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
+    bit_operations::set_bit_in_value(&mut result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }
@@ -98,7 +97,7 @@ pub fn rar_instruction(state: &mut State) {
     let mut result = accumulator_value.rotate_right(1);
     let bit_index = 7;
     let carry = bit_operations::is_bit_set(result, bit_index);
-    result = bit_operations::get_value_with_bit_set(result, bit_index, previous_carry);
+    bit_operations::set_bit_in_value(&mut result, bit_index, previous_carry);
     state.set_register(Register::A, result);
     state.condition_flags.carry = carry;
 }
@@ -391,7 +390,13 @@ mod tests {
             .register_values(hashmap! { Register::A => 24, Register::E => 48 })
             .build();
         cmp_instruction(&mut state, Register::E);
-        assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => 24, Register::E => 48 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build());
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 24, Register::E => 48 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true })
+                .build(),
+        );
     }
 
     #[test]
@@ -403,6 +408,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 54 })
                 .condition_flag_values(
                     hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
                 )
@@ -416,7 +422,13 @@ mod tests {
             .register_values(hashmap! { Register::A => 36 })
             .build();
         cpi_instruction(&mut state, 60);
-        assert_state_is_as_expected(&state, &StateBuilder::default().register_values(hashmap! { Register::A => -24 }).condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true }).build());
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 36 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true })
+                .build(),
+        );
     }
 
     #[test]

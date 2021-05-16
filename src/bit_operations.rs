@@ -12,14 +12,14 @@ pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn get_value_with_bit_set(value: i8, bit_index: u8, bit_flag: bool) -> i8 {
+pub fn set_bit_in_value(value: &mut i8, bit_index: u8, bit_flag: bool) {
     if bit_index >= 8 {
         panic!("Invalid bit index of {}", bit_index);
     }
 
     let bit_mask = 1 << bit_index;
     let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
-    value & !bit_mask | bit_value_mask
+    *value = *value & !bit_mask | bit_value_mask;
 }
 
 #[cfg_attr(test, mutate)]

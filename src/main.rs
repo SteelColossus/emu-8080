@@ -17,9 +17,6 @@ fn main() -> Result<(), String> {
     let mut emulator_state = State::default();
     emulator_state.load_memory(file_bytes);
 
-    let mut timer = Instant::now();
-    let mut frame_count = 0;
-
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
@@ -43,16 +40,22 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
+    let mut timer = Instant::now();
+    let mut current_screen_line: u32 = 0;
+
     'running: loop {
         run_next_operation(&mut emulator_state);
 
         let duration = timer.elapsed();
 
-        if duration > Duration::from_millis(1000 / FRAME_RATE) {
+        if duration > Duration::from_micros(1_000_000 / FRAME_RATE / SCREEN_HEIGHT as u64) {
             timer = Instant::now();
-            frame_count += 1;
-            generate_video_interrupts_if_needed(&mut emulator_state, frame_count % FRAME_RATE);
+            current_screen_line += 1;
+            generate_video_interrupts_if_needed(&mut emulator_state, current_screen_line);
+        }
 
+        if current_screen_line >= SCREEN_HEIGHT {
+            current_screen_line = 0;
             let screen_data = get_screen_data(&emulator_state);
             texture
                 .update(None, &screen_data, SCREEN_WIDTH as usize)
@@ -73,10 +76,10 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn run_next_operation(emulator_state: &mut State) {
-    let memory_value = emulator_state.get_memory_value_at_program_counter();
+fn run_next_operation(state: &mut State) {
+    let memory_value = state.get_memory_value_at_program_counter();
     let operation = emu_8080::disassembler::disassemble_op_code(memory_value);
-    emulator_state.run_operation(operation);
+    state.run_operation(operation);
 }
 
 fn raise_interrupt(state: &mut State, reset_index: u8) {
@@ -86,18 +89,12 @@ fn raise_interrupt(state: &mut State, reset_index: u8) {
     }
 }
 
-fn generate_video_interrupts_if_needed(state: &mut State, frame_count: u64) -> bool {
-    let screen_line = frame_count * (SCREEN_HEIGHT as u64 / FRAME_RATE);
-
+fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32) {
     if screen_line == 93 {
         raise_interrupt(state, 1);
-        return true;
-    } else if screen_line == 0 {
+    } else if screen_line == SCREEN_HEIGHT {
         raise_interrupt(state, 2);
-        return true;
     }
-
-    false
 }
 
 fn get_screen_data(state: &State) -> [u8; SCREEN_DATA_SIZE] {
@@ -112,9 +109,9 @@ fn get_screen_data(state: &State) -> [u8; SCREEN_DATA_SIZE] {
             let memory_value = state.get_value_at_memory_location(memory_address);
 
             if memory_value != 0 {
-                for bit_index in (0..7).rev() {
+                for bit_index in 0..7 {
                     if emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index) {
-                        let screen_pixel_x = screen_height_byte * 8 + 7 - bit_index as u32;
+                        let screen_pixel_x = screen_height_byte * 8 + bit_index as u32;
                         let screen_data_index =
                             (screen_row * SCREEN_WIDTH + screen_pixel_x) as usize;
                         screen_data[screen_data_index] = 0b11111111;
