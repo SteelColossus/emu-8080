@@ -25,28 +25,6 @@ pub fn ani_instruction(state: &mut State, data: i8) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn ora_instruction(state: &mut State, source_register: Register) {
-    let source_register_value = state.get_register_value(source_register);
-    ori_instruction(state, source_register_value);
-}
-
-#[cfg_attr(test, mutate)]
-pub fn ora_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
-    let memory_value = state.get_value_at_memory_location(memory_address);
-    ori_instruction(state, memory_value as i8)
-}
-
-#[cfg_attr(test, mutate)]
-pub fn ori_instruction(state: &mut State, data: i8) {
-    state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
-        value | target_value
-    });
-    state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = false;
-}
-
-#[cfg_attr(test, mutate)]
 pub fn xra_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.get_register_value(source_register);
     xri_instruction(state, source_register_value);
@@ -63,6 +41,28 @@ pub fn xra_mem_instruction(state: &mut State) {
 pub fn xri_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value ^ target_value
+    });
+    state.set_condition_flags_from_register_value(Register::A);
+    state.condition_flags.carry = false;
+}
+
+#[cfg_attr(test, mutate)]
+pub fn ora_instruction(state: &mut State, source_register: Register) {
+    let source_register_value = state.get_register_value(source_register);
+    ori_instruction(state, source_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn ora_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    ori_instruction(state, memory_value as i8)
+}
+
+#[cfg_attr(test, mutate)]
+pub fn ori_instruction(state: &mut State, data: i8) {
+    state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
+        value | target_value
     });
     state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = false;
@@ -252,109 +252,6 @@ mod tests {
     }
 
     #[test]
-    fn ora_logically_ors_the_accumulator_with_the_value_of_the_given_register() {
-        let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
-            .build();
-        ora_instruction(&mut state, Register::B);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::B => 0b01000101, Register::A => 0b01010101 })
-                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
-                .build(),
-        );
-    }
-
-    #[test]
-    fn ora_applied_to_an_existing_accumulator_value_does_nothing() {
-        let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::A => 0b10100110 })
-            .build();
-        ora_instruction(&mut state, Register::A);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::A => 0b10100110 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
-                )
-                .build(),
-        );
-    }
-
-    #[test]
-    fn ora_clears_the_carry_flag() {
-        let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
-            .build();
-        ora_instruction(&mut state, Register::A);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
-                .build(),
-        );
-    }
-
-    #[test]
-    fn ora_mem_logically_ors_the_accumulator_with_the_memory_value() {
-        let mut state = StateBuilder::default()
-            .register_values(
-                hashmap! { Register::A => 0b01010101, Register::H => -29, Register::L => -119 },
-            )
-            .memory_values(hashmap! { 0xE389 => 0b11011011 })
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
-            .build();
-        ora_mem_instruction(&mut state);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(
-                    hashmap! { Register::A => 0b11011111, Register::H => -29, Register::L => -119 },
-                )
-                .memory_values(hashmap! { 0xE389 => 0b11011011 })
-                .condition_flag_values(hashmap! { ConditionFlag::Sign => true })
-                .build(),
-        );
-    }
-
-    #[test]
-    fn ori_logically_ors_the_accumulator_with_the_given_value() {
-        let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::A => 0b11000110 })
-            .build();
-        ori_instruction(&mut state, 0b01100011);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::A => 0b11100111 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
-                )
-                .build(),
-        );
-    }
-
-    #[test]
-    fn ori_clears_the_carry_flag() {
-        let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
-            .build();
-        ori_instruction(&mut state, 0b00000000);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
-                .build(),
-        );
-    }
-
-    #[test]
     fn xra_logically_xors_the_accumulator_with_the_value_of_the_given_register() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
@@ -449,6 +346,109 @@ mod tests {
             .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
             .build();
         xri_instruction(&mut state, 0b00000000);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ora_logically_ors_the_accumulator_with_the_value_of_the_given_register() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })
+            .build();
+        ora_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => 0b01000101, Register::A => 0b01010101 })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ora_applied_to_an_existing_accumulator_value_does_nothing() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b10100110 })
+            .build();
+        ora_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b10100110 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ora_clears_the_carry_flag() {
+        let mut state = StateBuilder::default()
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        ora_instruction(&mut state, Register::A);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ora_mem_logically_ors_the_accumulator_with_the_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(
+                hashmap! { Register::A => 0b01010101, Register::H => -29, Register::L => -119 },
+            )
+            .memory_values(hashmap! { 0xE389 => 0b11011011 })
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        ora_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::A => 0b11011111, Register::H => -29, Register::L => -119 },
+                )
+                .memory_values(hashmap! { 0xE389 => 0b11011011 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ori_logically_ors_the_accumulator_with_the_given_value() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b11000110 })
+            .build();
+        ori_instruction(&mut state, 0b01100011);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b11100111 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ori_clears_the_carry_flag() {
+        let mut state = StateBuilder::default()
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        ori_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()

@@ -68,9 +68,11 @@ pub fn run_operation(
         Operation::Xchg => transfer_instructions::xchg_instruction(state),
         Operation::Add(register) => arithmetic_instructions::add_instruction(state, *register),
         Operation::Adi => arithmetic_instructions::adi_instruction(state, get_low_data() as i8),
+        Operation::Adc(register) => arithmetic_instructions::adc_instruction(state, *register),
         Operation::Aci => arithmetic_instructions::aci_instruction(state, get_low_data() as i8),
         Operation::Sub(register) => arithmetic_instructions::sub_instruction(state, *register),
         Operation::Sui => arithmetic_instructions::sui_instruction(state, get_low_data() as i8),
+        Operation::Sbb(register) => arithmetic_instructions::sbb_instruction(state, *register),
         Operation::Sbi => arithmetic_instructions::sbi_instruction(state, get_low_data() as i8),
         Operation::Inr(register) => arithmetic_instructions::inr_instruction(state, *register),
         Operation::InrMem => arithmetic_instructions::inr_mem_instruction(state),
@@ -124,6 +126,7 @@ pub fn run_operation(
         ),
         Operation::Ret => branch_instructions::ret_instruction(state),
         Operation::Rcond(condition) => branch_instructions::rcond_instruction(state, *condition),
+        Operation::Rst(reset_index) => branch_instructions::rst_instruction(state, *reset_index),
         Operation::Pchl => branch_instructions::pchl_instruction(state),
         Operation::Push(register_pair) => {
             stack_instructions::push_instruction(state, *register_pair)
@@ -134,6 +137,7 @@ pub fn run_operation(
         Operation::Xthl => {
             println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
         }
+        Operation::Sphl => stack_instructions::sphl_instruction(state),
         Operation::In => {
             println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
             let port_number = get_low_data();

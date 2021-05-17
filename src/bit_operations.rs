@@ -44,3 +44,20 @@ pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
 pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
     ((value & 0x00FF) as u8, (value >> 8) as u8)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "Invalid bit index of 8")]
+    fn is_bit_set_panics_when_given_an_invalid_bit_index() {
+        is_bit_set(127, 8);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid bit index of 8")]
+    fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
+        set_bit_in_value(&mut 127, 8, true);
+    }
+}

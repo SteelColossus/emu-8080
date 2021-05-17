@@ -98,6 +98,13 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_000_101 => Operation::Add(Register::L),
         0b10_000_111 => Operation::Add(Register::A),
         0b11_000_110 => Operation::Adi,
+        0b10_001_000 => Operation::Adc(Register::B),
+        0b10_001_001 => Operation::Adc(Register::C),
+        0b10_001_010 => Operation::Adc(Register::D),
+        0b10_001_011 => Operation::Adc(Register::E),
+        0b10_001_100 => Operation::Adc(Register::H),
+        0b10_001_101 => Operation::Adc(Register::L),
+        0b10_001_111 => Operation::Adc(Register::A),
         0b11_001_110 => Operation::Aci,
         0b10_010_000 => Operation::Sub(Register::B),
         0b10_010_001 => Operation::Sub(Register::C),
@@ -107,6 +114,13 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_010_101 => Operation::Sub(Register::L),
         0b10_010_111 => Operation::Sub(Register::A),
         0b11_010_110 => Operation::Sui,
+        0b10_011_000 => Operation::Sbb(Register::B),
+        0b10_011_001 => Operation::Sbb(Register::C),
+        0b10_011_010 => Operation::Sbb(Register::D),
+        0b10_011_011 => Operation::Sbb(Register::E),
+        0b10_011_100 => Operation::Sbb(Register::H),
+        0b10_011_101 => Operation::Sbb(Register::L),
+        0b10_011_111 => Operation::Sbb(Register::A),
         0b11_011_110 => Operation::Sbi,
         0b00_000_100 => Operation::Inr(Register::B),
         0b00_001_100 => Operation::Inr(Register::C),
@@ -216,6 +230,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_100_001 => Operation::Pop(RegisterPair::HL),
         0b11_110_001 => Operation::PopPsw,
         0b11_100_011 => Operation::Xthl,
+        0b11_111_001 => Operation::Sphl,
         0b11_011_011 => Operation::In,
         0b11_010_011 => Operation::Out,
         0b11_111_011 => Operation::Ei,
@@ -485,6 +500,16 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_adc() {
+        let register_map = get_all_registers_for_op_codes(0b10_001_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Adc(register));
+        }
+    }
+
+    #[test]
     fn disassembler_handles_aci() {
         let operation = disassemble_op_code(0b11_001_110);
         assert_operation_equals_expected(&operation, &Operation::Aci);
@@ -504,6 +529,16 @@ mod tests {
     fn disassembler_handles_sui() {
         let operation = disassemble_op_code(0b11_010_110);
         assert_operation_equals_expected(&operation, &Operation::Sui);
+    }
+
+    #[test]
+    fn disassembler_handles_sbb() {
+        let register_map = get_all_registers_for_op_codes(0b10_011_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Sbb(register));
+        }
     }
 
     #[test]
@@ -796,6 +831,12 @@ mod tests {
     fn disassembler_handles_xthl() {
         let operation = disassemble_op_code(0b11_100_011);
         assert_operation_equals_expected(&operation, &Operation::Xthl);
+    }
+
+    #[test]
+    fn disassembler_handles_sphl() {
+        let operation = disassemble_op_code(0b11_111_001);
+        assert_operation_equals_expected(&operation, &Operation::Sphl);
     }
 
     #[test]

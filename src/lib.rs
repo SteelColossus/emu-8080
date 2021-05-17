@@ -476,9 +476,11 @@ pub enum Operation {
     Xchg,
     Add(Register),
     Adi,
+    Adc(Register),
     Aci,
     Sub(Register),
     Sui,
+    Sbb(Register),
     Sbi,
     Inr(Register),
     InrMem,
@@ -512,12 +514,14 @@ pub enum Operation {
     Ccond(Condition),
     Ret,
     Rcond(Condition),
+    Rst(u8),
     Pchl,
     Push(RegisterPair),
     PushPsw,
     Pop(RegisterPair),
     PopPsw,
     Xthl,
+    Sphl,
     In,
     Out,
     Ei,
@@ -580,17 +584,5 @@ mod tests {
         let state = StateBuilder::default().stack_pointer(0xF00F).build();
         assert_eq!((0x0F, 0xF0), RegisterPair::SP.get_low_high_value(&state));
         assert_eq!(state.stack_pointer, RegisterPair::SP.get_full_value(&state));
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid bit index of 8")]
-    fn is_bit_set_panics_when_given_an_invalid_bit_index() {
-        bit_operations::is_bit_set(127, 8);
-    }
-
-    #[test]
-    #[should_panic(expected = "Invalid bit index of 8")]
-    fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
-        bit_operations::set_bit_in_value(&mut 127, 8, true);
     }
 }

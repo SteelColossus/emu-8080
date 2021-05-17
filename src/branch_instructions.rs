@@ -3,7 +3,7 @@ use crate::{bit_operations, Condition, ConditionFlag, RegisterPair, State};
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
-fn is_condition_flag_set(state: &State, condition: Condition, base_instruction: &str) -> bool {
+fn is_condition_true(state: &State, condition: Condition, base_instruction: &str) -> bool {
     if condition.0 == ConditionFlag::AuxiliaryCarry {
         panic!(
             "The auxiliary carry flag is not a supported condition for {}",
@@ -21,7 +21,7 @@ pub fn jmp_instruction(state: &mut State, low_data: u8, high_data: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn jcond_instruction(state: &mut State, low_data: u8, high_data: u8, condition: Condition) {
-    if is_condition_flag_set(state, condition, "JMP") {
+    if is_condition_true(state, condition, "JMP") {
         jmp_instruction(state, low_data, high_data);
     }
 }
@@ -39,7 +39,7 @@ pub fn call_instruction(state: &mut State, low_data: u8, high_data: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn ccond_instruction(state: &mut State, low_data: u8, high_data: u8, condition: Condition) {
-    if is_condition_flag_set(state, condition, "CALL") {
+    if is_condition_true(state, condition, "CALL") {
         call_instruction(state, low_data, high_data);
     }
 }
@@ -57,7 +57,7 @@ pub fn ret_instruction(state: &mut State) {
 
 #[cfg_attr(test, mutate)]
 pub fn rcond_instruction(state: &mut State, condition: Condition) {
-    if is_condition_flag_set(state, condition, "RET") {
+    if is_condition_true(state, condition, "RET") {
         ret_instruction(state);
     }
 }

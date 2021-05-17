@@ -3,17 +3,6 @@ use crate::{bit_operations, Register, RegisterPair, State};
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
-pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
-    state.set_register(register, data);
-}
-
-#[cfg_attr(test, mutate)]
-pub fn mvi_mem_instruction(state: &mut State, data: i8) {
-    let memory_address = RegisterPair::HL.get_full_value(&state);
-    state.set_value_at_memory_location(memory_address, data as u8);
-}
-
-#[cfg_attr(test, mutate)]
 pub fn mov_instruction(state: &mut State, from_register: Register, to_register: Register) {
     let from_register_value = state.get_register_value(from_register);
     mvi_instruction(state, to_register, from_register_value);
@@ -30,6 +19,17 @@ pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
 pub fn mov_to_mem_instruction(state: &mut State, register: Register) {
     let data = state.get_register_value(register);
     mvi_mem_instruction(state, data as i8);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
+    state.set_register(register, data);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn mvi_mem_instruction(state: &mut State, data: i8) {
+    let memory_address = RegisterPair::HL.get_full_value(&state);
+    state.set_value_at_memory_location(memory_address, data as u8);
 }
 
 #[cfg_attr(test, mutate)]
@@ -116,46 +116,6 @@ mod tests {
     use crate::base_test_functions::assert_state_is_as_expected;
     use crate::StateBuilder;
     use maplit::hashmap;
-
-    #[test]
-    fn mvi_loads_data_into_one_register() {
-        let mut state = State::default();
-        mvi_instruction(&mut state, Register::A, 64);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::A => 64 })
-                .build(),
-        );
-    }
-
-    #[test]
-    fn mvi_loads_data_into_multiple_registers() {
-        let mut state = State::default();
-        mvi_instruction(&mut state, Register::B, 1);
-        mvi_instruction(&mut state, Register::D, 127);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::B => 1, Register::D => 127 })
-                .build(),
-        );
-    }
-
-    #[test]
-    fn mvi_mem_loads_data_into_memory_location_determined_by_registers() {
-        let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => 62, Register::L => 13 })
-            .build();
-        mvi_mem_instruction(&mut state, -64);
-        assert_state_is_as_expected(
-            &state,
-            &StateBuilder::default()
-                .register_values(hashmap! { Register::H => 62, Register::L => 13 })
-                .memory_values(hashmap! { 0x3E0D => 192 })
-                .build(),
-        );
-    }
 
     #[test]
     fn mov_moves_value_from_one_register_to_another() {
@@ -313,6 +273,46 @@ mod tests {
             &StateBuilder::default()
                 .register_values(hashmap! { Register::B => 18 })
                 .memory_values(hashmap! { 0x0000 => 18 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mvi_loads_data_into_one_register() {
+        let mut state = State::default();
+        mvi_instruction(&mut state, Register::A, 64);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 64 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mvi_loads_data_into_multiple_registers() {
+        let mut state = State::default();
+        mvi_instruction(&mut state, Register::B, 1);
+        mvi_instruction(&mut state, Register::D, 127);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::B => 1, Register::D => 127 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn mvi_mem_loads_data_into_memory_location_determined_by_registers() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => 62, Register::L => 13 })
+            .build();
+        mvi_mem_instruction(&mut state, -64);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 62, Register::L => 13 })
+                .memory_values(hashmap! { 0x3E0D => 192 })
                 .build(),
         );
     }
