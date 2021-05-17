@@ -511,10 +511,12 @@ pub enum Operation {
     Ccond(Condition),
     Ret,
     Rcond(Condition),
+    Pchl,
     Push(RegisterPair),
     PushPsw,
     Pop(RegisterPair),
     PopPsw,
+    Xthl,
     In,
     Out,
     Ei,
@@ -677,6 +679,7 @@ impl Operation {
             Operation::Rcond(condition) => {
                 branch_instructions::rcond_instruction(state, *condition)
             }
+            Operation::Pchl => branch_instructions::pchl_instruction(state),
             Operation::Push(register_pair) => {
                 stack_instructions::push_instruction(state, *register_pair)
             }
@@ -688,6 +691,9 @@ impl Operation {
             }
             Operation::PopPsw => {
                 stack_instructions::pop_psw_instruction(state);
+            }
+            Operation::Xthl => {
+                println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
             }
             Operation::In => {
                 println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
