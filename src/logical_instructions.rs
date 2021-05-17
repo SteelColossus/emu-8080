@@ -1,4 +1,4 @@
-use crate::{bit_operations, Register, State};
+use crate::{bit_operations, Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -6,6 +6,13 @@ use mutagen::mutate;
 pub fn ana_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.get_register_value(source_register);
     ani_instruction(state, source_register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn ana_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    ani_instruction(state, memory_value as i8)
 }
 
 #[cfg_attr(test, mutate)]
@@ -24,6 +31,13 @@ pub fn ora_instruction(state: &mut State, source_register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn ora_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    ori_instruction(state, memory_value as i8)
+}
+
+#[cfg_attr(test, mutate)]
 pub fn ori_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value | target_value
@@ -39,6 +53,13 @@ pub fn xra_instruction(state: &mut State, source_register: Register) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn xra_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    xri_instruction(state, memory_value as i8)
+}
+
+#[cfg_attr(test, mutate)]
 pub fn xri_instruction(state: &mut State, data: i8) {
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value ^ target_value
@@ -49,11 +70,15 @@ pub fn xri_instruction(state: &mut State, data: i8) {
 
 #[cfg_attr(test, mutate)]
 pub fn cmp_instruction(state: &mut State, register: Register) {
-    let accumulator_value = state.get_register_value(Register::A);
     let register_value = state.get_register_value(register);
-    let result = accumulator_value.wrapping_sub(register_value);
-    state.set_condition_flags_from_result(result);
-    state.condition_flags.carry = accumulator_value < register_value;
+    cpi_instruction(state, register_value);
+}
+
+#[cfg_attr(test, mutate)]
+pub fn cmp_mem_instruction(state: &mut State) {
+    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_value = state.get_value_at_memory_location(memory_address);
+    cpi_instruction(state, memory_value as i8);
 }
 
 #[cfg_attr(test, mutate)]
@@ -175,6 +200,27 @@ mod tests {
     }
 
     #[test]
+    fn ana_mem_logically_ands_the_accumulator_with_the_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(
+                hashmap! { Register::A => 0b01010101, Register::H => -108, Register::L => 77 },
+            )
+            .memory_values(hashmap! { 0x944D => 0b11011011 })
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        ana_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::A => 0b01010001, Register::H => -108, Register::L => 77 },
+                )
+                .memory_values(hashmap! { 0x944D => 0b11011011 })
+                .build(),
+        );
+    }
+
+    #[test]
     fn ani_logically_ands_the_accumulator_with_the_given_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
@@ -249,6 +295,28 @@ mod tests {
                 .condition_flag_values(
                     hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
                 )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn ora_mem_logically_ors_the_accumulator_with_the_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(
+                hashmap! { Register::A => 0b01010101, Register::H => -29, Register::L => -119 },
+            )
+            .memory_values(hashmap! { 0xE389 => 0b11011011 })
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        ora_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::A => 0b11011111, Register::H => -29, Register::L => -119 },
+                )
+                .memory_values(hashmap! { 0xE389 => 0b11011011 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true })
                 .build(),
         );
     }
@@ -335,6 +403,30 @@ mod tests {
     }
 
     #[test]
+    fn xra_mem_logically_xors_the_accumulator_with_the_memory_value() {
+        let mut state = StateBuilder::default()
+            .register_values(
+                hashmap! { Register::A => 0b01010101, Register::H => 30, Register::L => 49 },
+            )
+            .memory_values(hashmap! { 0x1E31 => 0b11011011 })
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        xra_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::A => 0b10001110, Register::H => 30, Register::L => 49 },
+                )
+                .memory_values(hashmap! { 0x1E31 => 0b11011011 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
     fn xri_logically_xors_the_accumulator_with_the_given_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b11000110 })
@@ -400,6 +492,46 @@ mod tests {
     }
 
     #[test]
+    fn cmp_mem_sets_the_zero_flag_if_both_are_same() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 99, Register::H => -93, Register::L => 57 })
+            .memory_values(hashmap! { 0xA339 => 99 })
+            .build();
+        cmp_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(
+                    hashmap! { Register::A => 99, Register::H => -93, Register::L => 57 },
+                )
+                .memory_values(hashmap! { 0xA339 => 99 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn cmp_mem_sets_the_carry_flag_if_memory_value_is_greater() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => -3, Register::H => 120, Register::L => 113 })
+            .memory_values(hashmap! { 0x7871 => 51 })
+            .build();
+        cmp_mem_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => -3, Register::H => 120, Register::L => 113 })
+                .memory_values(hashmap! { 0x7871 => 51 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
     fn cpi_sets_the_zero_flag_if_both_are_same() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 54 })
@@ -417,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn cpi_sets_the_carry_flag_if_register_value_is_greater() {
+    fn cpi_sets_the_carry_flag_if_given_value_is_greater() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 36 })
             .build();

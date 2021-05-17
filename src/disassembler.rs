@@ -136,13 +136,6 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_011_001 => Operation::Dad(RegisterPair::DE),
         0b00_101_001 => Operation::Dad(RegisterPair::HL),
         0b00_111_001 => Operation::Dad(RegisterPair::SP),
-        0b10_111_000 => Operation::Cmp(Register::B),
-        0b10_111_001 => Operation::Cmp(Register::C),
-        0b10_111_010 => Operation::Cmp(Register::D),
-        0b10_111_011 => Operation::Cmp(Register::E),
-        0b10_111_100 => Operation::Cmp(Register::H),
-        0b10_111_101 => Operation::Cmp(Register::L),
-        0b10_111_111 => Operation::Cmp(Register::A),
         0b10_100_000 => Operation::Ana(Register::B),
         0b10_100_001 => Operation::Ana(Register::C),
         0b10_100_010 => Operation::Ana(Register::D),
@@ -150,6 +143,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_100_100 => Operation::Ana(Register::H),
         0b10_100_101 => Operation::Ana(Register::L),
         0b10_100_111 => Operation::Ana(Register::A),
+        0b10_100_110 => Operation::AnaMem,
         0b11_100_110 => Operation::Ani,
         0b10_101_000 => Operation::Xra(Register::B),
         0b10_101_001 => Operation::Xra(Register::C),
@@ -158,6 +152,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_101_100 => Operation::Xra(Register::H),
         0b10_101_101 => Operation::Xra(Register::L),
         0b10_101_111 => Operation::Xra(Register::A),
+        0b10_101_110 => Operation::XraMem,
         0b11_101_110 => Operation::Xri,
         0b10_110_000 => Operation::Ora(Register::B),
         0b10_110_001 => Operation::Ora(Register::C),
@@ -166,12 +161,22 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_110_100 => Operation::Ora(Register::H),
         0b10_110_101 => Operation::Ora(Register::L),
         0b10_110_111 => Operation::Ora(Register::A),
+        0b10_110_110 => Operation::OraMem,
         0b11_110_110 => Operation::Ori,
+        0b10_111_000 => Operation::Cmp(Register::B),
+        0b10_111_001 => Operation::Cmp(Register::C),
+        0b10_111_010 => Operation::Cmp(Register::D),
+        0b10_111_011 => Operation::Cmp(Register::E),
+        0b10_111_100 => Operation::Cmp(Register::H),
+        0b10_111_101 => Operation::Cmp(Register::L),
+        0b10_111_111 => Operation::Cmp(Register::A),
+        0b10_111_110 => Operation::CmpMem,
         0b11_111_110 => Operation::Cpi,
         0b00_000_111 => Operation::Rlc,
         0b00_001_111 => Operation::Rrc,
         0b00_010_111 => Operation::Ral,
         0b00_011_111 => Operation::Rar,
+        0b00_101_111 => Operation::Cma,
         0b00_111_111 => Operation::Cmc,
         0b00_110_111 => Operation::Stc,
         0b11_000_011 => Operation::Jmp,
@@ -568,16 +573,6 @@ mod tests {
     }
 
     #[test]
-    fn disassembler_handles_cmp() {
-        let register_map = get_all_registers_for_op_codes(0b10_111_000, 0);
-
-        for (op_code, register) in register_map {
-            let operation = disassemble_op_code(op_code);
-            assert_operation_equals_expected(&operation, &Operation::Cmp(register));
-        }
-    }
-
-    #[test]
     fn disassembler_handles_ana() {
         let register_map = get_all_registers_for_op_codes(0b10_100_000, 0);
 
@@ -585,6 +580,12 @@ mod tests {
             let operation = disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Ana(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_ana_mem() {
+        let operation = disassemble_op_code(0b10_100_110);
+        assert_operation_equals_expected(&operation, &Operation::AnaMem);
     }
 
     #[test]
@@ -604,6 +605,12 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_xra_mem() {
+        let operation = disassemble_op_code(0b10_101_110);
+        assert_operation_equals_expected(&operation, &Operation::XraMem);
+    }
+
+    #[test]
     fn disassembler_handles_xri() {
         let operation = disassemble_op_code(0b11_101_110);
         assert_operation_equals_expected(&operation, &Operation::Xri);
@@ -620,9 +627,31 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_ora_mem() {
+        let operation = disassemble_op_code(0b10_110_110);
+        assert_operation_equals_expected(&operation, &Operation::OraMem);
+    }
+
+    #[test]
     fn disassembler_handles_ori() {
         let operation = disassemble_op_code(0b11_110_110);
         assert_operation_equals_expected(&operation, &Operation::Ori);
+    }
+
+    #[test]
+    fn disassembler_handles_cmp() {
+        let register_map = get_all_registers_for_op_codes(0b10_111_000, 0);
+
+        for (op_code, register) in register_map {
+            let operation = disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Cmp(register));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_cmp_mem() {
+        let operation = disassemble_op_code(0b10_111_110);
+        assert_operation_equals_expected(&operation, &Operation::CmpMem);
     }
 
     #[test]
@@ -653,6 +682,12 @@ mod tests {
     fn disassembler_handles_rar() {
         let operation = disassemble_op_code(0b00_011_111);
         assert_operation_equals_expected(&operation, &Operation::Rar);
+    }
+
+    #[test]
+    fn disassembler_handles_cma() {
+        let operation = disassemble_op_code(0b00_101_111);
+        assert_operation_equals_expected(&operation, &Operation::Cma);
     }
 
     #[test]
