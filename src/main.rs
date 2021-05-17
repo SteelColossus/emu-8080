@@ -90,7 +90,8 @@ fn raise_interrupt(state: &mut State, reset_index: u8) {
 }
 
 fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32) {
-    if screen_line == 93 {
+    // From http://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html
+    if screen_line == 96 {
         raise_interrupt(state, 1);
     } else if screen_line == SCREEN_HEIGHT {
         raise_interrupt(state, 2);
