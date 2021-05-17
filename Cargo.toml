@@ -11,4 +11,4 @@ maplit = "1.0.2"
 sdl2 = { version = "0.34.5", features = ["bundled"] }
 
 [dev-dependencies]
-mutagen = {git = "https://github.com/llogiq/mutagen"}
+mutagen = { git = "https://github.com/llogiq/mutagen" }
