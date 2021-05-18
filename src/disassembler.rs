@@ -220,6 +220,14 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_101_000 => Operation::Rcond((ConditionFlag::Parity, true)),
         0b11_110_000 => Operation::Rcond((ConditionFlag::Sign, false)),
         0b11_111_000 => Operation::Rcond((ConditionFlag::Sign, true)),
+        0b11_000_111 => Operation::Rst(0),
+        0b11_001_111 => Operation::Rst(1),
+        0b11_010_111 => Operation::Rst(2),
+        0b11_011_111 => Operation::Rst(3),
+        0b11_100_111 => Operation::Rst(4),
+        0b11_101_111 => Operation::Rst(5),
+        0b11_110_111 => Operation::Rst(6),
+        0b11_111_111 => Operation::Rst(7),
         0b11_101_001 => Operation::Pchl,
         0b11_000_101 => Operation::Push(RegisterPair::BC),
         0b11_010_101 => Operation::Push(RegisterPair::DE),
@@ -366,6 +374,12 @@ mod tests {
             bit_patterns,
             get_register_pair_from_bit_pattern,
         )
+    }
+
+    #[test]
+    #[should_panic(expected = "Unrecognized opcode: 0b00001000")]
+    fn disassembler_panics_on_unsupported_op_code() {
+        disassemble_op_code(0b00_001_000);
     }
 
     #[test]
@@ -784,6 +798,21 @@ mod tests {
         for (op_code, condition) in condition_map {
             let operation = disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Rcond(condition));
+        }
+    }
+
+    #[test]
+    fn disassembler_handles_rst() {
+        let reset_index_map = get_all_combinations_for_op_codes(
+            0b11_000_111,
+            3,
+            vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111],
+            |bit_pattern| bit_pattern,
+        );
+
+        for (op_code, reset_index) in reset_index_map {
+            let operation = disassemble_op_code(op_code);
+            assert_operation_equals_expected(&operation, &Operation::Rst(reset_index));
         }
     }
 
