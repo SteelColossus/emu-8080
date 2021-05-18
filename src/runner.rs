@@ -139,7 +139,7 @@ pub fn run_operation(
         Operation::Pop(register_pair) => stack_instructions::pop_instruction(state, *register_pair),
         Operation::PushPsw => stack_instructions::push_psw_instruction(state),
         Operation::PopPsw => stack_instructions::pop_psw_instruction(state),
-        Operation::Xthl => todo!(),
+        Operation::Xthl => stack_instructions::xthl_instruction(state),
         Operation::Sphl => stack_instructions::sphl_instruction(state),
         Operation::In => {
             println!("-- Skipping over partially implemented instruction - this may cause incorrect behaviour! --");

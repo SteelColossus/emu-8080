@@ -88,6 +88,19 @@ pub fn pop_psw_instruction(state: &mut State) {
 }
 
 #[cfg_attr(test, mutate)]
+pub fn xthl_instruction(state: &mut State) {
+    let sp_plus_one = state.stack_pointer.wrapping_add(1);
+    let low_memory_value = state.get_value_at_memory_location(state.stack_pointer);
+    let high_memory_value = state.get_value_at_memory_location(sp_plus_one);
+    let l_register_value = state.get_register_value(Register::L);
+    let h_register_value = state.get_register_value(Register::H);
+    state.set_register(Register::L, low_memory_value as i8);
+    state.set_value_at_memory_location(state.stack_pointer, l_register_value as u8);
+    state.set_register(Register::H, high_memory_value as i8);
+    state.set_value_at_memory_location(sp_plus_one, h_register_value as u8);
+}
+
+#[cfg_attr(test, mutate)]
 pub fn sphl_instruction(state: &mut State) {
     state.stack_pointer = RegisterPair::HL.get_full_value(&state);
 }
@@ -214,6 +227,24 @@ mod tests {
                     ConditionFlag::Carry => true,
                     ConditionFlag::AuxiliaryCarry => false,
                 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn xthl_exchanges_the_stack_top_with_the_register_values() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::H => -94, Register::L => 127 })
+            .stack_pointer(0xD39B)
+            .memory_values(hashmap! { 0xD39B => 213, 0xD39C => 86 })
+            .build();
+        xthl_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::H => 86, Register::L => -43 })
+                .stack_pointer(0xD39B)
+                .memory_values(hashmap! { 0xD39B => 127, 0xD39C => 162 })
                 .build(),
         );
     }
