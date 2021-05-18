@@ -153,6 +153,9 @@ pub fn run_operation(
                     println!("Port {}", port_number);
                     state.set_register(Register::A, 0b0000_0000);
                 }
+                3 => println!(
+                    "-- Skipping over UNIMPLEMENTED port - this may cause incorrect behaviour! --"
+                ),
                 _ => panic!("Can't handle Port {}", port_number),
             };
         }
@@ -161,6 +164,9 @@ pub fn run_operation(
             let port_number = get_low_data();
             match port_number {
                 3 | 5 | 6 => println!("Port {}", port_number),
+                2 | 4 => println!(
+                    "-- Skipping over UNIMPLEMENTED port - this may cause incorrect behaviour! --"
+                ),
                 _ => panic!("Can't handle Port {}", port_number),
             };
         }
