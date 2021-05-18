@@ -97,6 +97,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_000_100 => Operation::Add(Register::H),
         0b10_000_101 => Operation::Add(Register::L),
         0b10_000_111 => Operation::Add(Register::A),
+        0b10_000_110 => Operation::AddMem,
         0b11_000_110 => Operation::Adi,
         0b10_001_000 => Operation::Adc(Register::B),
         0b10_001_001 => Operation::Adc(Register::C),
@@ -105,6 +106,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_001_100 => Operation::Adc(Register::H),
         0b10_001_101 => Operation::Adc(Register::L),
         0b10_001_111 => Operation::Adc(Register::A),
+        0b10_001_110 => Operation::AdcMem,
         0b11_001_110 => Operation::Aci,
         0b10_010_000 => Operation::Sub(Register::B),
         0b10_010_001 => Operation::Sub(Register::C),
@@ -113,6 +115,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_010_100 => Operation::Sub(Register::H),
         0b10_010_101 => Operation::Sub(Register::L),
         0b10_010_111 => Operation::Sub(Register::A),
+        0b10_010_110 => Operation::SubMem,
         0b11_010_110 => Operation::Sui,
         0b10_011_000 => Operation::Sbb(Register::B),
         0b10_011_001 => Operation::Sbb(Register::C),
@@ -121,6 +124,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b10_011_100 => Operation::Sbb(Register::H),
         0b10_011_101 => Operation::Sbb(Register::L),
         0b10_011_111 => Operation::Sbb(Register::A),
+        0b10_011_110 => Operation::SbbMem,
         0b11_011_110 => Operation::Sbi,
         0b00_000_100 => Operation::Inr(Register::B),
         0b00_001_100 => Operation::Inr(Register::C),
@@ -150,6 +154,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b00_011_001 => Operation::Dad(RegisterPair::DE),
         0b00_101_001 => Operation::Dad(RegisterPair::HL),
         0b00_111_001 => Operation::Dad(RegisterPair::SP),
+        0b00_100_111 => Operation::Daa,
         0b10_100_000 => Operation::Ana(Register::B),
         0b10_100_001 => Operation::Ana(Register::C),
         0b10_100_010 => Operation::Ana(Register::D),
@@ -508,6 +513,12 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_add_mem() {
+        let operation = disassemble_op_code(0b10_000_110);
+        assert_operation_equals_expected(&operation, &Operation::AddMem);
+    }
+
+    #[test]
     fn disassembler_handles_adi() {
         let operation = disassemble_op_code(0b11_000_110);
         assert_operation_equals_expected(&operation, &Operation::Adi);
@@ -521,6 +532,12 @@ mod tests {
             let operation = disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Adc(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_adc_mem() {
+        let operation = disassemble_op_code(0b10_001_110);
+        assert_operation_equals_expected(&operation, &Operation::AdcMem);
     }
 
     #[test]
@@ -540,6 +557,12 @@ mod tests {
     }
 
     #[test]
+    fn disassembler_handles_sub_mem() {
+        let operation = disassemble_op_code(0b10_010_110);
+        assert_operation_equals_expected(&operation, &Operation::SubMem);
+    }
+
+    #[test]
     fn disassembler_handles_sui() {
         let operation = disassemble_op_code(0b11_010_110);
         assert_operation_equals_expected(&operation, &Operation::Sui);
@@ -553,6 +576,12 @@ mod tests {
             let operation = disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Sbb(register));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_sbb_mem() {
+        let operation = disassemble_op_code(0b10_011_110);
+        assert_operation_equals_expected(&operation, &Operation::SbbMem);
     }
 
     #[test]
@@ -621,6 +650,12 @@ mod tests {
             let operation = disassemble_op_code(op_code);
             assert_operation_equals_expected(&operation, &Operation::Dad(register_pair));
         }
+    }
+
+    #[test]
+    fn disassembler_handles_daa() {
+        let operation = disassemble_op_code(0b00_100_111);
+        assert_operation_equals_expected(&operation, &Operation::Daa);
     }
 
     #[test]

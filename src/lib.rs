@@ -317,14 +317,16 @@ impl State {
 
         let mut additional_byte_1 = None;
         let mut additional_byte_2 = None;
-        let num_additional_bytes = operation.num_additional_bytes();
+        let instruction_data_type = operation.additional_data_required();
 
-        if num_additional_bytes >= 1 {
+        if instruction_data_type == InstructionDataType::Single
+            || instruction_data_type == InstructionDataType::LowHigh
+        {
             additional_byte_1 = Some(self.get_memory_value_at_program_counter());
             self.program_counter += 1;
         }
 
-        if num_additional_bytes >= 2 {
+        if instruction_data_type == InstructionDataType::LowHigh {
             additional_byte_2 = Some(self.get_memory_value_at_program_counter());
             self.program_counter += 1;
         }
@@ -459,6 +461,13 @@ impl StateBuilder {
     }
 }
 
+#[derive(Eq, PartialEq)]
+pub enum InstructionDataType {
+    None,
+    Single,
+    LowHigh,
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Operation {
     Mov(Register, Register),
@@ -475,12 +484,16 @@ pub enum Operation {
     Stax(RegisterPair),
     Xchg,
     Add(Register),
+    AddMem,
     Adi,
     Adc(Register),
+    AdcMem,
     Aci,
     Sub(Register),
+    SubMem,
     Sui,
     Sbb(Register),
+    SbbMem,
     Sbi,
     Inr(Register),
     InrMem,
@@ -489,6 +502,7 @@ pub enum Operation {
     Inx(RegisterPair),
     Dcx(RegisterPair),
     Dad(RegisterPair),
+    Daa,
     Ana(Register),
     AnaMem,
     Ani,
@@ -532,30 +546,30 @@ pub enum Operation {
 
 impl Operation {
     #[cfg_attr(test, mutate)]
-    pub fn num_additional_bytes(&self) -> u8 {
+    pub fn additional_data_required(&self) -> InstructionDataType {
         match self {
-            Operation::Mvi(_) => 1,
-            Operation::MviMem => 1,
-            Operation::Lxi(_) => 2,
-            Operation::Lda => 2,
-            Operation::Sta => 2,
-            Operation::Lhld => 2,
-            Operation::Shld => 2,
-            Operation::Adi => 1,
-            Operation::Aci => 1,
-            Operation::Sui => 1,
-            Operation::Sbi => 1,
-            Operation::Ani => 1,
-            Operation::Xri => 1,
-            Operation::Ori => 1,
-            Operation::Cpi => 1,
-            Operation::Jmp => 2,
-            Operation::Jcond(_) => 2,
-            Operation::Call => 2,
-            Operation::Ccond(_) => 2,
-            Operation::In => 1,
-            Operation::Out => 1,
-            _ => 0,
+            Operation::Mvi(_) => InstructionDataType::Single,
+            Operation::MviMem => InstructionDataType::Single,
+            Operation::Lxi(_) => InstructionDataType::LowHigh,
+            Operation::Lda => InstructionDataType::LowHigh,
+            Operation::Sta => InstructionDataType::LowHigh,
+            Operation::Lhld => InstructionDataType::LowHigh,
+            Operation::Shld => InstructionDataType::LowHigh,
+            Operation::Adi => InstructionDataType::Single,
+            Operation::Aci => InstructionDataType::Single,
+            Operation::Sui => InstructionDataType::Single,
+            Operation::Sbi => InstructionDataType::Single,
+            Operation::Ani => InstructionDataType::Single,
+            Operation::Xri => InstructionDataType::Single,
+            Operation::Ori => InstructionDataType::Single,
+            Operation::Cpi => InstructionDataType::Single,
+            Operation::Jmp => InstructionDataType::LowHigh,
+            Operation::Jcond(_) => InstructionDataType::LowHigh,
+            Operation::Call => InstructionDataType::LowHigh,
+            Operation::Ccond(_) => InstructionDataType::LowHigh,
+            Operation::In => InstructionDataType::Single,
+            Operation::Out => InstructionDataType::Single,
+            _ => InstructionDataType::None,
         }
     }
 }

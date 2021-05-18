@@ -67,12 +67,16 @@ pub fn run_operation(
         }
         Operation::Xchg => transfer_instructions::xchg_instruction(state),
         Operation::Add(register) => arithmetic_instructions::add_instruction(state, *register),
+        Operation::AddMem => todo!(),
         Operation::Adi => arithmetic_instructions::adi_instruction(state, get_low_data() as i8),
         Operation::Adc(register) => arithmetic_instructions::adc_instruction(state, *register),
+        Operation::AdcMem => todo!(),
         Operation::Aci => arithmetic_instructions::aci_instruction(state, get_low_data() as i8),
         Operation::Sub(register) => arithmetic_instructions::sub_instruction(state, *register),
+        Operation::SubMem => todo!(),
         Operation::Sui => arithmetic_instructions::sui_instruction(state, get_low_data() as i8),
         Operation::Sbb(register) => arithmetic_instructions::sbb_instruction(state, *register),
+        Operation::SbbMem => todo!(),
         Operation::Sbi => arithmetic_instructions::sbi_instruction(state, get_low_data() as i8),
         Operation::Inr(register) => arithmetic_instructions::inr_instruction(state, *register),
         Operation::InrMem => arithmetic_instructions::inr_mem_instruction(state),
@@ -87,6 +91,7 @@ pub fn run_operation(
         Operation::Dad(register_pair) => {
             arithmetic_instructions::dad_instruction(state, *register_pair)
         }
+        Operation::Daa => todo!(),
         Operation::Ana(register) => logical_instructions::ana_instruction(state, *register),
         Operation::AnaMem => logical_instructions::ana_mem_instruction(state),
         Operation::Ani => logical_instructions::ani_instruction(state, get_low_data() as i8),
@@ -134,12 +139,10 @@ pub fn run_operation(
         Operation::Pop(register_pair) => stack_instructions::pop_instruction(state, *register_pair),
         Operation::PushPsw => stack_instructions::push_psw_instruction(state),
         Operation::PopPsw => stack_instructions::pop_psw_instruction(state),
-        Operation::Xthl => {
-            println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
-        }
+        Operation::Xthl => todo!(),
         Operation::Sphl => stack_instructions::sphl_instruction(state),
         Operation::In => {
-            println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+            println!("-- Skipping over partially implemented instruction - this may cause incorrect behaviour! --");
             let port_number = get_low_data();
             match port_number {
                 1 => {
@@ -154,7 +157,7 @@ pub fn run_operation(
             };
         }
         Operation::Out => {
-            println!("-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --");
+            println!("-- Skipping over partially implemented instruction - this may cause incorrect behaviour! --");
             let port_number = get_low_data();
             match port_number {
                 3 | 5 | 6 => println!("Port {}", port_number),
