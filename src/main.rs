@@ -21,7 +21,7 @@ fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("Space Invaders", SCREEN_WIDTH, SCREEN_HEIGHT)
+        .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_WIDTH * 4)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
