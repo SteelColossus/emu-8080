@@ -8,9 +8,11 @@ use std::fs;
 use std::time::{Duration, Instant};
 
 const FRAME_RATE: u64 = 60;
-const SCREEN_WIDTH: u32 = 256;
-const SCREEN_HEIGHT: u32 = 224;
-const SCREEN_DATA_SIZE: usize = (SCREEN_HEIGHT * SCREEN_WIDTH) as usize;
+const SCREEN_WIDTH: u32 = 224;
+const SCREEN_HEIGHT: u32 = 256;
+const PIXEL_COMPONENTS: usize = 3;
+
+type ScreenData = [[bool; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize];
 
 fn main() -> Result<(), String> {
     let file_bytes = fs::read("invaders.bin").unwrap();
@@ -21,7 +23,7 @@ fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_WIDTH * 4)
+        .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_HEIGHT * 4)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
@@ -31,7 +33,7 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB332, SCREEN_WIDTH, SCREEN_HEIGHT)
+        .create_texture_streaming(PixelFormatEnum::RGB24, SCREEN_WIDTH, SCREEN_HEIGHT)
         .map_err(|e| e.to_string())?;
 
     canvas.set_draw_color(Color::BLACK);
@@ -57,8 +59,9 @@ fn main() -> Result<(), String> {
         if current_screen_line >= SCREEN_HEIGHT {
             current_screen_line = 0;
             let screen_data = get_screen_data(&emulator_state);
+            let pixel_data = get_pixels_from_screen_data(&screen_data);
             texture
-                .update(None, &screen_data, SCREEN_WIDTH as usize)
+                .update(None, &pixel_data, SCREEN_WIDTH as usize * 3)
                 .map_err(|e| e.to_string())?;
 
             render_next_frame(&mut canvas, &texture)?;
@@ -98,25 +101,24 @@ fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32) {
     }
 }
 
-fn get_screen_data(state: &State) -> [u8; SCREEN_DATA_SIZE] {
-    const VIDEO_MEMORY_START: u32 = 0x2400;
-    const BYTES_PER_ROW: u32 = SCREEN_WIDTH / 8;
-    let mut screen_data = [0; SCREEN_DATA_SIZE];
+fn get_screen_data(state: &State) -> ScreenData {
+    const VIDEO_MEMORY_START: u16 = 0x2400;
+    const NUM_BYTES_PER_COLUMN: u32 = SCREEN_HEIGHT / 8;
+    let mut screen_data = [[false; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize];
 
-    for screen_row in 0..SCREEN_HEIGHT {
-        for screen_height_byte in 0..BYTES_PER_ROW {
-            let memory_address =
-                (VIDEO_MEMORY_START + screen_row * BYTES_PER_ROW + screen_height_byte) as u16;
+    for screen_row_byte in 0..NUM_BYTES_PER_COLUMN {
+        for screen_column in 0..SCREEN_WIDTH {
+            let memory_address = VIDEO_MEMORY_START
+                + (screen_column * NUM_BYTES_PER_COLUMN
+                    + (NUM_BYTES_PER_COLUMN - screen_row_byte - 1)) as u16;
             let memory_value = state.get_value_at_memory_location(memory_address);
 
-            if memory_value != 0 {
-                for bit_index in 0..7 {
-                    if emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index) {
-                        let screen_pixel_x = screen_height_byte * 8 + bit_index as u32;
-                        let screen_data_index =
-                            (screen_row * SCREEN_WIDTH + screen_pixel_x) as usize;
-                        screen_data[screen_data_index] = 0b11111111;
-                    }
+            if memory_value != 0b0000_0000 {
+                for bit_index in 0_u8..=7_u8 {
+                    let screen_row = screen_row_byte * 8 + (7 - bit_index) as u32;
+                    let is_bit_set =
+                        emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index);
+                    screen_data[screen_row as usize][screen_column as usize] = is_bit_set;
                 }
             }
         }
@@ -125,9 +127,38 @@ fn get_screen_data(state: &State) -> [u8; SCREEN_DATA_SIZE] {
     screen_data
 }
 
+fn get_pixels_from_screen_data(
+    screen_data: &ScreenData,
+) -> [u8; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * PIXEL_COMPONENTS] {
+    let mut pixel_data = [0; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * PIXEL_COMPONENTS];
+
+    for (y, row) in screen_data.iter().enumerate() {
+        for (x, value) in row.iter().enumerate() {
+            if *value {
+                let index = (y * SCREEN_WIDTH as usize + x) * PIXEL_COMPONENTS;
+
+                // From https://tcrf.net/File:SpaceInvadersArcColorUseTV.png
+                let color = if (32..64).contains(&y) {
+                    Color::RED
+                } else if y >= 178 && (y < 240 || (24..136).contains(&x)) {
+                    Color::GREEN
+                } else {
+                    Color::WHITE
+                };
+
+                pixel_data[index] = color.r;
+                pixel_data[index + 1] = color.g;
+                pixel_data[index + 2] = color.b;
+            }
+        }
+    }
+
+    pixel_data
+}
+
 fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(), String> {
     canvas.clear();
-    canvas.copy_ex(texture, None, None, -90.0, None, false, false)?;
+    canvas.copy(texture, None, None)?;
     canvas.present();
     Ok(())
 }
