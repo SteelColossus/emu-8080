@@ -141,35 +141,10 @@ pub fn run_operation(
         Operation::PopPsw => stack_instructions::pop_psw_instruction(state),
         Operation::Xthl => stack_instructions::xthl_instruction(state),
         Operation::Sphl => stack_instructions::sphl_instruction(state),
-        Operation::In => {
-            println!("-- Skipping over partially implemented instruction - this may cause incorrect behaviour! --");
-            let port_number = get_low_data();
-            match port_number {
-                1 => {
-                    println!("Port {}", port_number);
-                    state.set_register(Register::A, 0b0000_1000);
-                }
-                2 => {
-                    println!("Port {}", port_number);
-                    state.set_register(Register::A, 0b0000_0000);
-                }
-                3 => println!(
-                    "-- Skipping over UNIMPLEMENTED port - this may cause incorrect behaviour! --"
-                ),
-                _ => panic!("Can't handle Port {}", port_number),
-            };
-        }
-        Operation::Out => {
-            println!("-- Skipping over partially implemented instruction - this may cause incorrect behaviour! --");
-            let port_number = get_low_data();
-            match port_number {
-                3 | 5 | 6 => println!("Port {}", port_number),
-                2 | 4 => println!(
-                    "-- Skipping over UNIMPLEMENTED port - this may cause incorrect behaviour! --"
-                ),
-                _ => panic!("Can't handle Port {}", port_number),
-            };
-        }
+        Operation::In => state.set_register(Register::A, state.ports.get_in_port(get_low_data())),
+        Operation::Out => state
+            .ports
+            .set_out_port(get_low_data(), state.get_register_value(Register::A)),
         Operation::Ei => stack_instructions::ei_instruction(state),
         Operation::Di => stack_instructions::di_instruction(state),
         Operation::Hlt => todo!(),

@@ -166,6 +166,20 @@ impl ConditionFlags {
     }
 }
 
+pub trait Ports {
+    fn get_in_port(&self, port_number: u8) -> i8;
+    fn set_out_port(&mut self, port_number: u8, value: i8);
+}
+
+struct DefaultPorts;
+
+impl Ports for DefaultPorts {
+    fn get_in_port(&self, _port_number: u8) -> i8 {
+        0
+    }
+    fn set_out_port(&mut self, _port_number: u8, _value: i8) {}
+}
+
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;
 
 pub struct State {
@@ -177,6 +191,7 @@ pub struct State {
     pub are_interrupts_enabled: bool,
     memory_footprint: HashMap<u16, u8>,
     is_memory_loaded: bool,
+    pub ports: Box<dyn Ports>,
 }
 
 impl Default for State {
@@ -457,6 +472,7 @@ impl StateBuilder {
             are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
             memory_footprint: HashMap::new(),
             is_memory_loaded: false,
+            ports: Box::new(DefaultPorts),
         }
     }
 }

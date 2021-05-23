@@ -1,4 +1,4 @@
-use emu_8080::State;
+use emu_8080::{bit_operations, Ports, State};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
@@ -13,10 +13,44 @@ const SCREEN_HEIGHT: u32 = 256;
 const NUM_PIXEL_COMPONENTS: usize = 3;
 const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PIXEL_COMPONENTS;
 
+#[derive(Default)]
+struct SpaceInvadersPorts {
+    shift_data: u16,
+    shift_amount: u8,
+}
+
+impl Ports for SpaceInvadersPorts {
+    fn get_in_port(&self, port_number: u8) -> i8 {
+        match port_number {
+            1 => 0b0000_1000,
+            2 => 0b0000_0000,
+            3 => {
+                ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
+                    >> (8 - self.shift_amount)) as i8
+            }
+            _ => panic!("Can't handle Port {}", port_number),
+        }
+    }
+
+    fn set_out_port(&mut self, port_number: u8, value: i8) {
+        match port_number {
+            3 | 5 | 6 => (),
+            2 => self.shift_amount = value as u8 & 0b0000_0111,
+            4 => {
+                let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
+                self.shift_data =
+                    bit_operations::concat_low_high_bytes(high_shift_data, value as u8);
+            }
+            _ => panic!("Can't handle Port {}", port_number),
+        };
+    }
+}
+
 fn main() -> Result<(), String> {
     let file_bytes = fs::read("invaders.bin").unwrap();
     let mut emulator_state = State::default();
     emulator_state.load_memory(file_bytes);
+    emulator_state.ports = Box::new(SpaceInvadersPorts::default());
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
