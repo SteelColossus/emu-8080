@@ -10,9 +10,8 @@ use std::time::{Duration, Instant};
 const FRAME_RATE: u64 = 60;
 const SCREEN_WIDTH: u32 = 224;
 const SCREEN_HEIGHT: u32 = 256;
-const PIXEL_COMPONENTS: usize = 3;
-
-type ScreenData = [[bool; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize];
+const NUM_PIXEL_COMPONENTS: usize = 3;
+const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PIXEL_COMPONENTS;
 
 fn main() -> Result<(), String> {
     let file_bytes = fs::read("invaders.bin").unwrap();
@@ -58,10 +57,13 @@ fn main() -> Result<(), String> {
 
         if current_screen_line >= SCREEN_HEIGHT {
             current_screen_line = 0;
-            let screen_data = get_screen_data(&emulator_state);
-            let pixel_data = get_pixels_from_screen_data(&screen_data);
+            let screen_pixel_data = get_screen_pixel_data(&emulator_state);
             texture
-                .update(None, &pixel_data, SCREEN_WIDTH as usize * 3)
+                .update(
+                    None,
+                    &screen_pixel_data,
+                    SCREEN_WIDTH as usize * NUM_PIXEL_COMPONENTS,
+                )
                 .map_err(|e| e.to_string())?;
 
             render_next_frame(&mut canvas, &texture)?;
@@ -101,10 +103,10 @@ fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32) {
     }
 }
 
-fn get_screen_data(state: &State) -> ScreenData {
+fn get_screen_pixel_data(state: &State) -> [u8; SCREEN_DATA_SIZE] {
     const VIDEO_MEMORY_START: u16 = 0x2400;
     const NUM_BYTES_PER_COLUMN: u32 = SCREEN_HEIGHT / 8;
-    let mut screen_data = [[false; SCREEN_WIDTH as usize]; SCREEN_HEIGHT as usize];
+    let mut screen_pixel_data = [0b0000_0000; SCREEN_DATA_SIZE];
 
     for screen_row_byte in 0..NUM_BYTES_PER_COLUMN {
         for screen_column in 0..SCREEN_WIDTH {
@@ -114,46 +116,53 @@ fn get_screen_data(state: &State) -> ScreenData {
             let memory_value = state.get_value_at_memory_location(memory_address);
 
             if memory_value != 0b0000_0000 {
-                for bit_index in 0_u8..=7_u8 {
-                    let screen_row = screen_row_byte * 8 + (7 - bit_index) as u32;
-                    let is_bit_set =
-                        emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index);
-                    screen_data[screen_row as usize][screen_column as usize] = is_bit_set;
-                }
+                set_row_byte_pixels(
+                    &mut screen_pixel_data,
+                    screen_row_byte,
+                    screen_column,
+                    memory_value,
+                )
             }
         }
     }
 
-    screen_data
+    screen_pixel_data
 }
 
-fn get_pixels_from_screen_data(
-    screen_data: &ScreenData,
-) -> [u8; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * PIXEL_COMPONENTS] {
-    let mut pixel_data = [0; (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * PIXEL_COMPONENTS];
+fn set_row_byte_pixels(
+    screen_pixel_data: &mut [u8; SCREEN_DATA_SIZE],
+    screen_row_byte: u32,
+    screen_column: u32,
+    memory_value: u8,
+) {
+    for bit_index in 0_u8..=7_u8 {
+        let is_bit_set = emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index);
 
-    for (y, row) in screen_data.iter().enumerate() {
-        for (x, value) in row.iter().enumerate() {
-            if *value {
-                let index = (y * SCREEN_WIDTH as usize + x) * PIXEL_COMPONENTS;
-
-                // From https://tcrf.net/File:SpaceInvadersArcColorUseTV.png
-                let color = if (32..64).contains(&y) {
-                    Color::RED
-                } else if y >= 178 && (y < 240 || (24..136).contains(&x)) {
-                    Color::GREEN
-                } else {
-                    Color::WHITE
-                };
-
-                pixel_data[index] = color.r;
-                pixel_data[index + 1] = color.g;
-                pixel_data[index + 2] = color.b;
-            }
+        if is_bit_set {
+            let screen_row = screen_row_byte * 8 + (7 - bit_index) as u32;
+            let index = (screen_row * SCREEN_WIDTH + screen_column) as usize * NUM_PIXEL_COMPONENTS;
+            set_pixel(
+                &mut screen_pixel_data[index..(index + NUM_PIXEL_COMPONENTS)],
+                screen_column,
+                screen_row,
+            );
         }
     }
+}
 
-    pixel_data
+fn set_pixel(pixel_slice: &mut [u8], x: u32, y: u32) {
+    // From https://tcrf.net/File:SpaceInvadersArcColorUseTV.png
+    let color = if (32..64).contains(&y) {
+        Color::RED
+    } else if y >= 178 && (y < 240 || (24..136).contains(&x)) {
+        Color::GREEN
+    } else {
+        Color::WHITE
+    };
+
+    pixel_slice[0] = color.r;
+    pixel_slice[1] = color.g;
+    pixel_slice[2] = color.b;
 }
 
 fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(), String> {
