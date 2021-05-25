@@ -167,17 +167,23 @@ impl ConditionFlags {
 }
 
 pub trait Ports {
-    fn get_in_port(&self, port_number: u8) -> i8;
-    fn set_out_port(&mut self, port_number: u8, value: i8);
+    fn read_in_port(&self, port_number: u8) -> i8;
+    fn write_out_port(&mut self, port_number: u8, value: i8);
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<i8>;
+    fn set_in_port_static_value(&mut self, port_number: u8, value: i8);
 }
 
 struct DefaultPorts;
 
 impl Ports for DefaultPorts {
-    fn get_in_port(&self, _port_number: u8) -> i8 {
+    fn read_in_port(&self, _port_number: u8) -> i8 {
         0
     }
-    fn set_out_port(&mut self, _port_number: u8, _value: i8) {}
+    fn write_out_port(&mut self, _port_number: u8, _value: i8) {}
+    fn get_in_port_static_value(&self, _port_number: u8) -> Option<i8> {
+        None
+    }
+    fn set_in_port_static_value(&mut self, _port_number: u8, _value: i8) {}
 }
 
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;

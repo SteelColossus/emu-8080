@@ -14,15 +14,35 @@ const NUM_PIXEL_COMPONENTS: usize = 3;
 const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PIXEL_COMPONENTS;
 
 #[derive(Default)]
+struct Inputs {
+    pub credit: bool,
+    pub start: bool,
+    pub shoot: bool,
+    pub left: bool,
+    pub right: bool,
+}
+
+impl Inputs {
+    fn reset(&mut self) {
+        self.credit = false;
+        self.start = false;
+        self.shoot = false;
+        self.left = false;
+        self.right = false;
+    }
+}
+
+#[derive(Default)]
 struct SpaceInvadersPorts {
     shift_data: u16,
     shift_amount: u8,
+    port_1: i8,
 }
 
 impl Ports for SpaceInvadersPorts {
-    fn get_in_port(&self, port_number: u8) -> i8 {
+    fn read_in_port(&self, port_number: u8) -> i8 {
         match port_number {
-            1 => 0b0000_1000,
+            1 => self.port_1,
             2 => 0b0000_0000,
             3 => {
                 ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
@@ -32,9 +52,9 @@ impl Ports for SpaceInvadersPorts {
         }
     }
 
-    fn set_out_port(&mut self, port_number: u8, value: i8) {
+    fn write_out_port(&mut self, port_number: u8, value: i8) {
         match port_number {
-            3 | 5 | 6 => (),
+            3 | 5 | 6 => {}
             2 => self.shift_amount = value as u8 & 0b0000_0111,
             4 => {
                 let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
@@ -43,6 +63,20 @@ impl Ports for SpaceInvadersPorts {
             }
             _ => panic!("Can't handle Port {}", port_number),
         };
+    }
+
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<i8> {
+        match port_number {
+            1 => Some(self.port_1),
+            _ => None,
+        }
+    }
+
+    fn set_in_port_static_value(&mut self, port_number: u8, value: i8) {
+        match port_number {
+            1 => self.port_1 = value,
+            _ => {}
+        }
     }
 }
 
@@ -74,6 +108,7 @@ fn main() -> Result<(), String> {
     canvas.present();
 
     let mut event_pump = sdl_context.event_pump()?;
+    let mut inputs = Inputs::default();
 
     let mut timer = Instant::now();
     let mut current_screen_line: u32 = 0;
@@ -101,11 +136,19 @@ fn main() -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
 
             render_next_frame(&mut canvas, &texture)?;
-            let should_quit = handle_events(&mut event_pump);
+            let should_quit = handle_events(&mut event_pump, &mut inputs);
 
             if should_quit {
                 break 'running;
             }
+
+            let mut port_1 = emulator_state.ports.get_in_port_static_value(1).unwrap();
+            bit_operations::set_bit_in_value(&mut port_1, 0, inputs.credit);
+            bit_operations::set_bit_in_value(&mut port_1, 2, inputs.start);
+            bit_operations::set_bit_in_value(&mut port_1, 4, inputs.shoot);
+            bit_operations::set_bit_in_value(&mut port_1, 5, inputs.left);
+            bit_operations::set_bit_in_value(&mut port_1, 6, inputs.right);
+            emulator_state.ports.set_in_port_static_value(1, port_1);
         }
 
         // Crude assumption of each instruction taking 2 cycles on a 2MHz processor for the time being
@@ -206,7 +249,9 @@ fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(),
     Ok(())
 }
 
-fn handle_events(event_pump: &mut EventPump) -> bool {
+fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
+    inputs.reset();
+
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -215,6 +260,36 @@ fn handle_events(event_pump: &mut EventPump) -> bool {
                 ..
             } => {
                 return true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::RShift),
+                ..
+            } => {
+                inputs.credit = true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Return),
+                ..
+            } => {
+                inputs.start = true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                inputs.shoot = true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                inputs.left = true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                inputs.right = true;
             }
             _ => {}
         }

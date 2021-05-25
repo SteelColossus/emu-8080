@@ -91,7 +91,9 @@ pub fn run_operation(
         Operation::Dad(register_pair) => {
             arithmetic_instructions::dad_instruction(state, *register_pair)
         }
-        Operation::Daa => todo!(),
+        Operation::Daa => println!(
+            "-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --"
+        ),
         Operation::Ana(register) => logical_instructions::ana_instruction(state, *register),
         Operation::AnaMem => logical_instructions::ana_mem_instruction(state),
         Operation::Ani => logical_instructions::ani_instruction(state, get_low_data() as i8),
@@ -141,10 +143,10 @@ pub fn run_operation(
         Operation::PopPsw => stack_instructions::pop_psw_instruction(state),
         Operation::Xthl => stack_instructions::xthl_instruction(state),
         Operation::Sphl => stack_instructions::sphl_instruction(state),
-        Operation::In => state.set_register(Register::A, state.ports.get_in_port(get_low_data())),
+        Operation::In => state.set_register(Register::A, state.ports.read_in_port(get_low_data())),
         Operation::Out => state
             .ports
-            .set_out_port(get_low_data(), state.get_register_value(Register::A)),
+            .write_out_port(get_low_data(), state.get_register_value(Register::A)),
         Operation::Ei => stack_instructions::ei_instruction(state),
         Operation::Di => stack_instructions::di_instruction(state),
         Operation::Hlt => todo!(),
