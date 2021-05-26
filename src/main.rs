@@ -16,34 +16,57 @@ const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PI
 #[derive(Default)]
 struct Inputs {
     pub credit: bool,
-    pub start: bool,
-    pub shoot: bool,
-    pub left: bool,
-    pub right: bool,
+    pub tilt: bool,
+    pub p1_start: bool,
+    pub p1_shoot: bool,
+    pub p1_left: bool,
+    pub p1_right: bool,
+    pub p2_start: bool,
+    pub p2_shoot: bool,
+    pub p2_left: bool,
+    pub p2_right: bool,
 }
 
 impl Inputs {
     fn reset(&mut self) {
         self.credit = false;
-        self.start = false;
-        self.shoot = false;
-        self.left = false;
-        self.right = false;
+        self.tilt = false;
+        self.p1_start = false;
+        self.p1_shoot = false;
+        self.p1_left = false;
+        self.p1_right = false;
+        self.p2_start = false;
+        self.p2_shoot = false;
+        self.p2_left = false;
+        self.p2_right = false;
     }
 }
 
-#[derive(Default)]
 struct SpaceInvadersPorts {
     shift_data: u16,
     shift_amount: u8,
-    port_1: i8,
+    port_1: u8,
+    port_2: u8,
+    watchdog: u8,
+}
+
+impl Default for SpaceInvadersPorts {
+    fn default() -> Self {
+        SpaceInvadersPorts {
+            shift_data: 0b0000_0000_0000_0000,
+            shift_amount: 0b0000_0000,
+            port_1: 0b0000_1000,
+            port_2: 0b0000_0000,
+            watchdog: 0b0000_0000,
+        }
+    }
 }
 
 impl Ports for SpaceInvadersPorts {
     fn read_in_port(&self, port_number: u8) -> i8 {
         match port_number {
-            1 => self.port_1,
-            2 => 0b0000_0000,
+            1 => self.port_1 as i8,
+            2 => self.port_2 as i8,
             3 => {
                 ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
                     >> (8 - self.shift_amount)) as i8
@@ -54,27 +77,30 @@ impl Ports for SpaceInvadersPorts {
 
     fn write_out_port(&mut self, port_number: u8, value: i8) {
         match port_number {
-            3 | 5 | 6 => {}
+            3 | 5 => {}
             2 => self.shift_amount = value as u8 & 0b0000_0111,
             4 => {
                 let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
                 self.shift_data =
                     bit_operations::concat_low_high_bytes(high_shift_data, value as u8);
             }
+            6 => self.watchdog = value as u8,
             _ => panic!("Can't handle Port {}", port_number),
         };
     }
 
     fn get_in_port_static_value(&self, port_number: u8) -> Option<i8> {
         match port_number {
-            1 => Some(self.port_1),
+            1 => Some(self.port_1 as i8),
+            2 => Some(self.port_2 as i8),
             _ => None,
         }
     }
 
     fn set_in_port_static_value(&mut self, port_number: u8, value: i8) {
         match port_number {
-            1 => self.port_1 = value,
+            1 => self.port_1 = value as u8,
+            2 => self.port_2 = value as u8,
             _ => {}
         }
     }
@@ -144,11 +170,19 @@ fn main() -> Result<(), String> {
 
             let mut port_1 = emulator_state.ports.get_in_port_static_value(1).unwrap();
             bit_operations::set_bit_in_value(&mut port_1, 0, inputs.credit);
-            bit_operations::set_bit_in_value(&mut port_1, 2, inputs.start);
-            bit_operations::set_bit_in_value(&mut port_1, 4, inputs.shoot);
-            bit_operations::set_bit_in_value(&mut port_1, 5, inputs.left);
-            bit_operations::set_bit_in_value(&mut port_1, 6, inputs.right);
+            bit_operations::set_bit_in_value(&mut port_1, 1, inputs.p2_start);
+            bit_operations::set_bit_in_value(&mut port_1, 2, inputs.p1_start);
+            bit_operations::set_bit_in_value(&mut port_1, 4, inputs.p1_shoot);
+            bit_operations::set_bit_in_value(&mut port_1, 5, inputs.p1_left);
+            bit_operations::set_bit_in_value(&mut port_1, 6, inputs.p1_right);
             emulator_state.ports.set_in_port_static_value(1, port_1);
+
+            let mut port_2 = emulator_state.ports.get_in_port_static_value(2).unwrap();
+            bit_operations::set_bit_in_value(&mut port_2, 2, inputs.tilt);
+            bit_operations::set_bit_in_value(&mut port_1, 4, inputs.p2_shoot);
+            bit_operations::set_bit_in_value(&mut port_1, 5, inputs.p2_left);
+            bit_operations::set_bit_in_value(&mut port_1, 6, inputs.p2_right);
+            emulator_state.ports.set_in_port_static_value(2, port_2);
         }
 
         // Crude assumption of each instruction taking 2 cycles on a 2MHz processor for the time being
@@ -268,28 +302,34 @@ fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
                 inputs.credit = true;
             }
             Event::KeyDown {
+                keycode: Some(Keycode::Backquote),
+                ..
+            } => {
+                inputs.tilt = true;
+            }
+            Event::KeyDown {
                 keycode: Some(Keycode::Return),
                 ..
             } => {
-                inputs.start = true;
+                inputs.p1_start = true;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                inputs.shoot = true;
+                inputs.p1_shoot = true;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Left),
                 ..
             } => {
-                inputs.left = true;
+                inputs.p1_left = true;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Right),
                 ..
             } => {
-                inputs.right = true;
+                inputs.p1_right = true;
             }
             _ => {}
         }
