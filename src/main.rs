@@ -197,6 +197,8 @@ fn main() -> Result<(), String> {
             bit_operations::set_bit_in_value(&mut port_2, 3, dip_switches.extra_ship_at_lower_score);
             bit_operations::set_bit_in_value(&mut port_2, 7, dip_switches.coin_info_off);
             emulator_state.ports.set_in_port_static_value(2, port_2);
+
+            inputs.reset();
         }
 
         // Crude assumption of each instruction taking 2 cycles on a 2MHz processor for the time being
@@ -298,8 +300,6 @@ fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(),
 }
 
 fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
-    inputs.reset();
-
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
