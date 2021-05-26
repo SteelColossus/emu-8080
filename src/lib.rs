@@ -1,52 +1,541 @@
-use std::fmt;
+use std::collections::HashMap;
 
-fn concat_as_bytes(low: u8, high: u8) -> u16 {
-    (u16::from(high) << 8) ^ u16::from(low)
-}
+use maplit::hashmap;
+#[cfg(test)]
+use mutagen::mutate;
 
-pub enum Condition {
-    NZ,
-    Z,
-    NC,
+pub mod arithmetic_instructions;
+#[cfg(test)]
+pub mod base_test_functions;
+pub mod bit_operations;
+pub mod branch_instructions;
+pub mod disassembler;
+pub mod logical_instructions;
+pub mod runner;
+pub mod stack_instructions;
+pub mod transfer_instructions;
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub enum Register {
+    A,
+    B,
     C,
-    PO,
-    PE,
-    P,
-    M,
+    D,
+    E,
+    H,
+    L,
 }
 
+pub type RegisterState = HashMap<Register, i8>;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum RegisterPair {
+    BC,
+    DE,
+    HL,
+    SP,
+}
+
+impl RegisterPair {
+    #[cfg_attr(test, mutate)]
+    pub fn get_low_high_value(&self, state: &State) -> (i8, i8) {
+        match self {
+            RegisterPair::BC => (
+                state.get_register_value(Register::C),
+                state.get_register_value(Register::B),
+            ),
+            RegisterPair::DE => (
+                state.get_register_value(Register::E),
+                state.get_register_value(Register::D),
+            ),
+            RegisterPair::HL => (
+                state.get_register_value(Register::L),
+                state.get_register_value(Register::H),
+            ),
+            RegisterPair::SP => {
+                let (low_value, high_value) =
+                    bit_operations::split_to_low_high_bytes(state.stack_pointer);
+                (low_value as i8, high_value as i8)
+            }
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_full_value(&self, state: &State) -> u16 {
+        if self == &RegisterPair::SP {
+            return state.stack_pointer;
+        }
+
+        let (low_value, high_value) = self.get_low_high_value(state);
+        bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_low_high_value(&self, state: &mut State, low_value: i8, high_value: i8) {
+        match self {
+            RegisterPair::BC => {
+                state.set_register(Register::C, low_value);
+                state.set_register(Register::B, high_value);
+            }
+            RegisterPair::DE => {
+                state.set_register(Register::E, low_value);
+                state.set_register(Register::D, high_value);
+            }
+            RegisterPair::HL => {
+                state.set_register(Register::L, low_value);
+                state.set_register(Register::H, high_value);
+            }
+            RegisterPair::SP => {
+                state.stack_pointer =
+                    bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+            }
+        };
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_full_value(&self, state: &mut State, value: u16) {
+        if self == &RegisterPair::SP {
+            state.stack_pointer = value;
+        }
+
+        let (low_value, high_value) = bit_operations::split_to_low_high_bytes(value);
+        self.set_low_high_value(state, low_value as i8, high_value as i8);
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub enum ConditionFlag {
+    Zero,
+    Sign,
+    Parity,
+    Carry,
+    AuxiliaryCarry,
+}
+
+pub type Condition = (ConditionFlag, bool);
+
+#[derive(Copy, Clone, Debug)]
+pub struct ConditionFlags {
+    pub zero: bool,
+    pub sign: bool,
+    pub parity: bool,
+    pub carry: bool,
+    pub auxiliary_carry: bool,
+}
+
+impl Default for ConditionFlags {
+    #[cfg_attr(test, mutate)]
+    fn default() -> Self {
+        ConditionFlags {
+            zero: false,
+            sign: false,
+            parity: false,
+            carry: false,
+            auxiliary_carry: false,
+        }
+    }
+}
+
+impl ConditionFlags {
+    #[cfg_attr(test, mutate)]
+    fn get_mut(&mut self, condition_flag: ConditionFlag) -> &mut bool {
+        match condition_flag {
+            ConditionFlag::Zero => &mut self.zero,
+            ConditionFlag::Sign => &mut self.sign,
+            ConditionFlag::Parity => &mut self.parity,
+            ConditionFlag::Carry => &mut self.carry,
+            ConditionFlag::AuxiliaryCarry => &mut self.auxiliary_carry,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_value(&self, condition_flag: ConditionFlag) -> bool {
+        match condition_flag {
+            ConditionFlag::Zero => self.zero,
+            ConditionFlag::Sign => self.sign,
+            ConditionFlag::Parity => self.parity,
+            ConditionFlag::Carry => self.carry,
+            ConditionFlag::AuxiliaryCarry => self.auxiliary_carry,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_value(&mut self, condition_flag: ConditionFlag, value: bool) {
+        let flag = self.get_mut(condition_flag);
+        *flag = value;
+    }
+}
+
+pub trait Ports {
+    fn read_in_port(&self, port_number: u8) -> i8;
+    fn write_out_port(&mut self, port_number: u8, value: i8);
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<i8>;
+    fn set_in_port_static_value(&mut self, port_number: u8, value: i8);
+}
+
+struct DefaultPorts;
+
+impl Ports for DefaultPorts {
+    fn read_in_port(&self, _port_number: u8) -> i8 {
+        0
+    }
+    fn write_out_port(&mut self, _port_number: u8, _value: i8) {}
+    fn get_in_port_static_value(&self, _port_number: u8) -> Option<i8> {
+        None
+    }
+    fn set_in_port_static_value(&mut self, _port_number: u8, _value: i8) {}
+}
+
+const MEMORY_SIZE: usize = u16::MAX as usize + 1;
+
+pub struct State {
+    registers: RegisterState,
+    pub condition_flags: ConditionFlags,
+    pub program_counter: u16,
+    pub stack_pointer: u16,
+    memory: [u8; MEMORY_SIZE],
+    pub are_interrupts_enabled: bool,
+    memory_footprint: HashMap<u16, u8>,
+    is_memory_loaded: bool,
+    pub ports: Box<dyn Ports>,
+}
+
+impl Default for State {
+    #[cfg_attr(test, mutate)]
+    fn default() -> Self {
+        StateBuilder::default().build()
+    }
+}
+
+impl State {
+    #[cfg_attr(test, mutate)]
+    pub fn get_register_state(&self) -> &RegisterState {
+        &self.registers
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_condition_flag_value(&self, condition_flag: ConditionFlag) -> bool {
+        self.condition_flags.get_value(condition_flag)
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_condition_flag_state(&self) -> HashMap<ConditionFlag, bool> {
+        hashmap! {
+            ConditionFlag::Zero => self.get_condition_flag_value(ConditionFlag::Zero),
+            ConditionFlag::Sign => self.get_condition_flag_value(ConditionFlag::Sign),
+            ConditionFlag::Parity => self.get_condition_flag_value(ConditionFlag::Parity),
+            ConditionFlag::Carry => self.get_condition_flag_value(ConditionFlag::Carry),
+            ConditionFlag::AuxiliaryCarry => self.get_condition_flag_value(ConditionFlag::AuxiliaryCarry),
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_condition_flag_value(&mut self, condition_flag: ConditionFlag, value: bool) {
+        self.condition_flags.set_value(condition_flag, value);
+    }
+
+    #[cfg_attr(test, mutate)]
+    fn get_register_mut(&mut self, register: Register) -> &mut i8 {
+        self.registers.get_mut(&register).unwrap()
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_register_value(&self, register: Register) -> i8 {
+        *self.registers.get(&register).unwrap()
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_register(&mut self, register: Register, value: i8) {
+        let register_to_set = self.get_register_mut(register);
+        *register_to_set = value;
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn load_memory(&mut self, contiguous_memory_bytes: Vec<u8>) {
+        for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
+            self.set_value_at_memory_location(memory_address as u16, *memory_value);
+        }
+        self.is_memory_loaded = true;
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_value_at_memory_location(&self, memory_address: u16) -> u8 {
+        self.memory[memory_address as usize]
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_memory_value_at_program_counter(&self) -> u8 {
+        self.get_value_at_memory_location(self.program_counter)
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_value_at_memory_location(&mut self, memory_address: u16, value: u8) {
+        self.memory[memory_address as usize] = value;
+
+        if self.is_memory_loaded {
+            if value == 0 {
+                self.memory_footprint.remove(&memory_address);
+            } else {
+                self.memory_footprint.insert(memory_address, value);
+            }
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn increase_register(&mut self, register: Register, relative_value: i8) -> bool {
+        let register_to_adjust = self.get_register_mut(register);
+        let (result, carry) = register_to_adjust.overflowing_add(relative_value);
+        *register_to_adjust = result;
+        carry
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn decrease_register(&mut self, register: Register, relative_value: i8) -> bool {
+        let register_to_adjust = self.get_register_mut(register);
+        let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
+        *register_to_adjust = result;
+        borrow
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_register_by_function_with_value<F>(
+        &mut self,
+        target_register: Register,
+        value: i8,
+        f: F,
+    ) where
+        F: FnOnce(i8, i8) -> i8,
+    {
+        let target_register_value = self.get_register_value(target_register);
+        self.set_register(target_register, f(value, target_register_value));
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn exchange_register_values(&mut self, register1: Register, register2: Register) {
+        let register1_value = self.get_register_value(register1);
+        let register2_value = self.get_register_value(register2);
+        self.set_register(register2, register1_value);
+        self.set_register(register1, register2_value);
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_condition_flags_from_result(&mut self, result: i8) {
+        self.condition_flags.zero = result == 0;
+        self.condition_flags.sign = bit_operations::is_bit_set(result, 7);
+        self.condition_flags.parity = bit_operations::get_parity(result);
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
+        let register_value = self.get_register_value(register);
+        self.set_condition_flags_from_result(register_value);
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn run_operation(&mut self, operation: Operation) {
+        let op_code_pc = self.program_counter;
+        self.program_counter += 1;
+
+        let mut additional_byte_1 = None;
+        let mut additional_byte_2 = None;
+        let instruction_data_type = operation.additional_data_required();
+
+        if instruction_data_type == InstructionDataType::Single
+            || instruction_data_type == InstructionDataType::LowHigh
+        {
+            additional_byte_1 = Some(self.get_memory_value_at_program_counter());
+            self.program_counter += 1;
+        }
+
+        if instruction_data_type == InstructionDataType::LowHigh {
+            additional_byte_2 = Some(self.get_memory_value_at_program_counter());
+            self.program_counter += 1;
+        }
+
+        if let (Some(byte_1), Some(byte_2)) = (additional_byte_1, additional_byte_2) {
+            println!(
+                "{:04X?} {:?} {:04X?}",
+                op_code_pc,
+                operation,
+                bit_operations::concat_low_high_bytes(byte_1, byte_2)
+            );
+        } else if let Some(byte_1) = additional_byte_1 {
+            println!("{:04X?} {:?} {:02X?}", op_code_pc, operation, byte_1);
+        } else {
+            println!("{:04X?} {:?}", op_code_pc, operation);
+        }
+
+        runner::run_operation(&operation, self, additional_byte_1, additional_byte_2);
+
+        const DISPLAY_MEMORY_FOOTPRINT: bool = false;
+
+        if operation != Operation::Nop {
+            println!(
+                "## pc: {:04X?}, sp: {:04X?}, registers: {:?}, {:?} ##",
+                self.program_counter, self.stack_pointer, self.registers, self.condition_flags
+            );
+
+            if DISPLAY_MEMORY_FOOTPRINT {
+                println!("## memory: {:?} ##", self.memory_footprint);
+            }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct StateBuilder {
+    register_values: Option<RegisterState>,
+    condition_flag_values: Option<HashMap<ConditionFlag, bool>>,
+    program_counter: Option<u16>,
+    stack_pointer: Option<u16>,
+    memory_values: Option<HashMap<u16, u8>>,
+    are_interrupts_enabled: Option<bool>,
+}
+
+impl StateBuilder {
+    #[cfg_attr(test, mutate)]
+    pub fn register_values(&mut self, register_values: RegisterState) -> &mut Self {
+        let mut new = self;
+        new.register_values = Some(register_values);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn condition_flag_values(
+        &mut self,
+        condition_flag_values: HashMap<ConditionFlag, bool>,
+    ) -> &mut Self {
+        let mut new = self;
+        new.condition_flag_values = Some(condition_flag_values);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn program_counter(&mut self, program_counter: u16) -> &mut Self {
+        let mut new = self;
+        new.program_counter = Some(program_counter);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn stack_pointer(&mut self, stack_pointer: u16) -> &mut Self {
+        let mut new = self;
+        new.stack_pointer = Some(stack_pointer);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn memory_values(&mut self, memory_values: HashMap<u16, u8>) -> &mut Self {
+        let mut new = self;
+        new.memory_values = Some(memory_values);
+        new
+    }
+
+    pub fn are_interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
+        let mut new = self;
+        new.are_interrupts_enabled = Some(are_interrupts_enabled);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn build(&self) -> State {
+        let mut registers = hashmap! {
+            Register::A => 0,
+            Register::B => 0,
+            Register::C => 0,
+            Register::D => 0,
+            Register::E => 0,
+            Register::H => 0,
+            Register::L => 0,
+        };
+        let mut condition_flags = ConditionFlags::default();
+        let mut memory = [0; MEMORY_SIZE];
+
+        if let Some(rvs) = &self.register_values {
+            for (register, value) in rvs {
+                registers.insert(*register, *value);
+            }
+        }
+
+        if let Some(cfvs) = &self.condition_flag_values {
+            for (condition_flag, value) in cfvs {
+                condition_flags.set_value(*condition_flag, *value);
+            }
+        }
+
+        if let Some(mvs) = &self.memory_values {
+            for (memory_address, value) in mvs {
+                memory[*memory_address as usize] = *value;
+            }
+        }
+
+        State {
+            registers,
+            condition_flags,
+            program_counter: self.program_counter.unwrap_or(0x0000),
+            stack_pointer: self.stack_pointer.unwrap_or(0x0000),
+            memory,
+            are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
+            memory_footprint: HashMap::new(),
+            is_memory_loaded: false,
+            ports: Box::new(DefaultPorts),
+        }
+    }
+}
+
+#[derive(Eq, PartialEq)]
+pub enum InstructionDataType {
+    None,
+    Single,
+    LowHigh,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Operation {
-    Mov,
-    Mvi,
-    Lxi,
+    Mov(Register, Register),
+    MovFromMem(Register),
+    MovToMem(Register),
+    Mvi(Register),
+    MviMem,
+    Lxi(RegisterPair),
     Lda,
     Sta,
     Lhld,
     Shld,
-    Ldax,
-    Stax,
+    Ldax(RegisterPair),
+    Stax(RegisterPair),
     Xchg,
-    Add,
+    Add(Register),
+    AddMem,
     Adi,
-    Adc,
+    Adc(Register),
+    AdcMem,
     Aci,
-    Sub,
+    Sub(Register),
+    SubMem,
     Sui,
-    Sbb,
+    Sbb(Register),
+    SbbMem,
     Sbi,
-    Inr,
-    Dcr,
-    Inx,
-    Dcx,
-    Dad,
+    Inr(Register),
+    InrMem,
+    Dcr(Register),
+    DcrMem,
+    Inx(RegisterPair),
+    Dcx(RegisterPair),
+    Dad(RegisterPair),
     Daa,
-    Ana,
+    Ana(Register),
+    AnaMem,
     Ani,
-    Xra,
+    Xra(Register),
+    XraMem,
     Xri,
-    Ora,
+    Ora(Register),
+    OraMem,
     Ori,
-    Cmp,
+    Cmp(Register),
+    CmpMem,
     Cpi,
     Rlc,
     Rrc,
@@ -56,37 +545,16 @@ pub enum Operation {
     Cmc,
     Stc,
     Jmp,
-    Jnz,
-    Jz,
-    Jnc,
-    Jc,
-    Jpo,
-    Jpe,
-    Jp,
-    Jm,
+    Jcond(Condition),
     Call,
-    Cnz,
-    Cz,
-    Cnc,
-    Cc,
-    Cpo,
-    Cpe,
-    Cp,
-    Cm,
+    Ccond(Condition),
     Ret,
-    Rnz,
-    Rz,
-    Rnc,
-    Rc,
-    Rpo,
-    Rpe,
-    Rp,
-    Rm,
-    Rst,
+    Rcond(Condition),
+    Rst(u8),
     Pchl,
-    Push,
+    Push(RegisterPair),
     PushPsw,
-    Pop,
+    Pop(RegisterPair),
     PopPsw,
     Xthl,
     Sphl,
@@ -99,361 +567,58 @@ pub enum Operation {
 }
 
 impl Operation {
-    fn name(&self) -> &str {
+    #[cfg_attr(test, mutate)]
+    pub fn additional_data_required(&self) -> InstructionDataType {
         match self {
-            Operation::Mov => "MOV",
-            Operation::Mvi => "MVI",
-            Operation::Lxi => "LXI",
-            Operation::Lda => "LDA",
-            Operation::Sta => "STA",
-            Operation::Lhld => "LHLD",
-            Operation::Shld => "SHLD",
-            Operation::Ldax => "LDAX",
-            Operation::Stax => "STAX",
-            Operation::Xchg => "XCHG",
-            Operation::Add => "ADD",
-            Operation::Adi => "ADI",
-            Operation::Adc => "ADC",
-            Operation::Aci => "ACI",
-            Operation::Sub => "SUB",
-            Operation::Sui => "SUI",
-            Operation::Sbb => "SBB",
-            Operation::Sbi => "SBI",
-            Operation::Inr => "INR",
-            Operation::Dcr => "DCR",
-            Operation::Inx => "INX",
-            Operation::Dcx => "DCX",
-            Operation::Dad => "DAD",
-            Operation::Daa => "DAA",
-            Operation::Ana => "ANA",
-            Operation::Ani => "ANI",
-            Operation::Xra => "XRA",
-            Operation::Xri => "XRI",
-            Operation::Ora => "ORA",
-            Operation::Ori => "ORI",
-            Operation::Cmp => "CMP",
-            Operation::Cpi => "CPI",
-            Operation::Rlc => "RLC",
-            Operation::Rrc => "RRC",
-            Operation::Ral => "RAL",
-            Operation::Rar => "RAR",
-            Operation::Cma => "CMA",
-            Operation::Cmc => "CMC",
-            Operation::Stc => "STC",
-            Operation::Jmp => "JMP",
-            Operation::Jnz => "JNZ",
-            Operation::Jz => "JZ",
-            Operation::Jnc => "JNC",
-            Operation::Jc => "JC",
-            Operation::Jpo => "JPO",
-            Operation::Jpe => "JPE",
-            Operation::Jp => "JP",
-            Operation::Jm => "JM",
-            Operation::Call => "CALL",
-            Operation::Cnz => "CNZ",
-            Operation::Cz => "CZ",
-            Operation::Cnc => "CNC",
-            Operation::Cc => "CC",
-            Operation::Cpo => "CPO",
-            Operation::Cpe => "CPE",
-            Operation::Cp => "CP",
-            Operation::Cm => "CM",
-            Operation::Ret => "RET",
-            Operation::Rnz => "RNZ",
-            Operation::Rz => "RZ",
-            Operation::Rnc => "RNC",
-            Operation::Rc => "RC",
-            Operation::Rpo => "RPO",
-            Operation::Rpe => "RPE",
-            Operation::Rp => "RP",
-            Operation::Rm => "RM",
-            Operation::Rst => "RST",
-            Operation::Pchl => "PCHL",
-            Operation::Push => "PUSH",
-            Operation::PushPsw => "PUSH PSW",
-            Operation::Pop => "POP",
-            Operation::PopPsw => "POP PSW",
-            Operation::Xthl => "XTHL",
-            Operation::Sphl => "SPHL",
-            Operation::In => "IN",
-            Operation::Out => "OUT",
-            Operation::Ei => "EI",
-            Operation::Di => "DI",
-            Operation::Hlt => "HLT",
-            Operation::Nop => "NOP",
+            Operation::Mvi(_) => InstructionDataType::Single,
+            Operation::MviMem => InstructionDataType::Single,
+            Operation::Lxi(_) => InstructionDataType::LowHigh,
+            Operation::Lda => InstructionDataType::LowHigh,
+            Operation::Sta => InstructionDataType::LowHigh,
+            Operation::Lhld => InstructionDataType::LowHigh,
+            Operation::Shld => InstructionDataType::LowHigh,
+            Operation::Adi => InstructionDataType::Single,
+            Operation::Aci => InstructionDataType::Single,
+            Operation::Sui => InstructionDataType::Single,
+            Operation::Sbi => InstructionDataType::Single,
+            Operation::Ani => InstructionDataType::Single,
+            Operation::Xri => InstructionDataType::Single,
+            Operation::Ori => InstructionDataType::Single,
+            Operation::Cpi => InstructionDataType::Single,
+            Operation::Jmp => InstructionDataType::LowHigh,
+            Operation::Jcond(_) => InstructionDataType::LowHigh,
+            Operation::Call => InstructionDataType::LowHigh,
+            Operation::Ccond(_) => InstructionDataType::LowHigh,
+            Operation::In => InstructionDataType::Single,
+            Operation::Out => InstructionDataType::Single,
+            _ => InstructionDataType::None,
         }
     }
 }
 
-impl fmt::Debug for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base_test_functions::assert_state_is_as_expected;
 
-impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-pub trait Location: fmt::Debug + fmt::Display {}
-
-#[derive(Debug)]
-pub enum Register {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-}
-
-impl Register {
-    fn name(&self) -> &str {
-        match self {
-            Register::A => "A",
-            Register::B => "B",
-            Register::C => "C",
-            Register::D => "D",
-            Register::E => "E",
-            Register::H => "H",
-            Register::L => "L",
-        }
-    }
-}
-
-impl fmt::Display for Register {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-impl Location for Register {}
-
-#[derive(Debug)]
-pub enum RegisterPair {
-    BC,
-    DE,
-    HL,
-    SP,
-}
-
-impl RegisterPair {
-    fn pair(&self) -> (Option<Register>, Option<Register>) {
-        match self {
-            RegisterPair::BC => (Some(Register::B), Some(Register::C)),
-            RegisterPair::DE => (Some(Register::D), Some(Register::E)),
-            RegisterPair::HL => (Some(Register::H), Some(Register::L)),
-            RegisterPair::SP => (None, None),
-        }
+    #[test]
+    fn can_get_state_of_all_registers() {
+        let state = State::default();
+        let register_state = state.get_register_state();
+        assert_eq!(register_state.len(), 7);
     }
 
-    fn name(&self) -> &str {
-        match self {
-            RegisterPair::BC => "BC",
-            RegisterPair::DE => "DE",
-            RegisterPair::HL => "HL",
-            RegisterPair::SP => "SP",
-        }
-    }
-}
-
-impl fmt::Display for RegisterPair {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-impl Location for RegisterPair {}
-
-#[derive(Debug)]
-pub enum MemoryRegisterPair {
-    M,
-}
-
-impl MemoryRegisterPair {
-    fn register_pair(&self) -> RegisterPair {
-        match self {
-            MemoryRegisterPair::M => RegisterPair::HL,
-        }
+    #[test]
+    fn default_state_has_all_default_values() {
+        let state = State::default();
+        assert_state_is_as_expected(&state, &State::default());
     }
 
-    fn name(&self) -> &str {
-        match self {
-            MemoryRegisterPair::M => "M",
-        }
-    }
-}
-
-impl fmt::Display for MemoryRegisterPair {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
-}
-
-impl Location for MemoryRegisterPair {}
-
-#[derive(Debug)]
-pub struct MemoryLocation {
-    address: u16,
-}
-
-impl MemoryLocation {
-    pub fn new(low: u8, high: u8) -> Self {
-        let address = concat_as_bytes(low, high);
-        MemoryLocation { address }
-    }
-}
-
-impl fmt::Display for MemoryLocation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "${:04X}", self.address)
-    }
-}
-
-impl Location for MemoryLocation {}
-
-#[derive(Debug)]
-pub struct ProgramAddress {
-    address: u16,
-}
-
-impl ProgramAddress {
-    pub fn new(low: u8, high: u8) -> Self {
-        let address = concat_as_bytes(low, high);
-        ProgramAddress { address }
-    }
-}
-
-impl fmt::Display for ProgramAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "#{:04X}", self.address)
-    }
-}
-
-impl Location for ProgramAddress {}
-
-#[derive(Debug)]
-pub struct Port {
-    port: u8,
-}
-
-impl Port {
-    pub fn new(port: u8) -> Self {
-        Port { port }
-    }
-}
-
-impl fmt::Display for Port {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.port)
-    }
-}
-
-impl Location for Port {}
-
-#[derive(Debug)]
-pub struct RestartNumber {
-    restart_number: u8,
-}
-
-impl RestartNumber {
-    pub fn new(restart_number: u8) -> Self {
-        RestartNumber { restart_number }
-    }
-}
-
-impl fmt::Display for RestartNumber {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.restart_number)
-    }
-}
-
-impl Location for RestartNumber {}
-
-#[derive(Debug)]
-pub struct Instruction<'a> {
-    pub operation: Operation,
-    to: Option<Box<dyn Location + 'a>>,
-    from: Option<Box<dyn Location + 'a>>,
-    content: Option<u8>,
-    content_high: Option<u8>,
-}
-
-impl<'a> Instruction<'a> {
-    fn new(
-        operation: Operation,
-        to: Option<Box<dyn Location + 'a>>,
-        from: Option<Box<dyn Location + 'a>>,
-        content: Option<u8>,
-        content_high: Option<u8>,
-    ) -> Self {
-        Instruction {
-            operation,
-            to,
-            from,
-            content,
-            content_high,
-        }
-    }
-
-    pub fn new_no_args(operation: Operation) -> Self {
-        Instruction::new(operation, None, None, None, None)
-    }
-
-    // From: loading from the provided location
-    // To: storing at the provided location
-    // If the operation happens in place, it is to and not from
-
-    pub fn new_to(operation: Operation, to: Box<dyn Location + 'a>) -> Self {
-        Instruction::new(operation, Some(to), None, None, None)
-    }
-
-    pub fn new_from(operation: Operation, from: Box<dyn Location + 'a>) -> Self {
-        Instruction::new(operation, None, Some(from), None, None)
-    }
-
-    pub fn new_content(operation: Operation, content: u8) -> Self {
-        Instruction::new(operation, None, None, Some(content), None)
-    }
-
-    pub fn new_to_from(operation: Operation, to: Box<dyn Location + 'a>, from: Box<dyn Location + 'a>) -> Self {
-        Instruction::new(operation, Some(to), Some(from), None, None)
-    }
-
-    pub fn new_to_content(operation: Operation, to: Box<dyn Location + 'a>, content: u8) -> Self {
-        Instruction::new(operation, Some(to), None, Some(content), None)
-    }
-
-    pub fn new_to_content16(operation: Operation, to: Box<dyn Location + 'a>, content: u8, content_high: u8) -> Self {
-        Instruction::new(operation, Some(to), None, Some(content), Some(content_high))
-    }
-}
-
-impl fmt::Display for Instruction<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:<6}", self.operation.name())?;
-
-        if let Some(to) = &self.to {
-            write!(f, "{}", to)?;
-
-            if let Some(from) = &self.from {
-                write!(f, ",{}", from)?;
-            } else if let Some(content) = self.content {
-                if let Some(content_high) = self.content_high {
-                    write!(f, ",&{:04X}", concat_as_bytes(content, content_high))?;
-                } else {
-                    write!(f, ",&{:02X}", content)?;
-                }
-            }
-        } else if let Some(from) = &self.from {
-            write!(f, "{}", from)?;
-        } else if let Some(content) = self.content {
-            write!(f, "&{:02X}", content)?;
-        }
-
-        Ok(())
+    #[allow(overflowing_literals)]
+    #[test]
+    fn stack_pointer_value_returned_by_register_pair_is_same_as_actual_value() {
+        let state = StateBuilder::default().stack_pointer(0xF00F).build();
+        assert_eq!((0x0F, 0xF0), RegisterPair::SP.get_low_high_value(&state));
+        assert_eq!(state.stack_pointer, RegisterPair::SP.get_full_value(&state));
     }
 }
