@@ -42,6 +42,14 @@ impl Inputs {
     }
 }
 
+#[derive(Default)]
+struct DipSwitches {
+    pub num_ships_low: bool,
+    pub num_ships_high: bool,
+    pub extra_ship_at_lower_score: bool,
+    pub coin_info_off: bool,
+}
+
 struct SpaceInvadersPorts {
     shift_data: u16,
     shift_amount: u8,
@@ -135,6 +143,7 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
     let mut inputs = Inputs::default();
+    let dip_switches = DipSwitches::default();
 
     let mut timer = Instant::now();
     let mut current_screen_line: u32 = 0;
@@ -179,9 +188,14 @@ fn main() -> Result<(), String> {
 
             let mut port_2 = emulator_state.ports.get_in_port_static_value(2).unwrap();
             bit_operations::set_bit_in_value(&mut port_2, 2, inputs.tilt);
-            bit_operations::set_bit_in_value(&mut port_1, 4, inputs.p2_shoot);
-            bit_operations::set_bit_in_value(&mut port_1, 5, inputs.p2_left);
-            bit_operations::set_bit_in_value(&mut port_1, 6, inputs.p2_right);
+            bit_operations::set_bit_in_value(&mut port_2, 4, inputs.p2_shoot);
+            bit_operations::set_bit_in_value(&mut port_2, 5, inputs.p2_left);
+            bit_operations::set_bit_in_value(&mut port_2, 6, inputs.p2_right);
+
+            bit_operations::set_bit_in_value(&mut port_2, 0, dip_switches.num_ships_low);
+            bit_operations::set_bit_in_value(&mut port_2, 1, dip_switches.num_ships_high);
+            bit_operations::set_bit_in_value(&mut port_2, 3, dip_switches.extra_ship_at_lower_score);
+            bit_operations::set_bit_in_value(&mut port_2, 7, dip_switches.coin_info_off);
             emulator_state.ports.set_in_port_static_value(2, port_2);
         }
 
