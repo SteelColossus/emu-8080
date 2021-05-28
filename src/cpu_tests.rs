@@ -67,6 +67,11 @@ mod tests {
             file_bytes.insert(0, memory_value);
         }
 
+        // Skip over DAA tests
+        file_bytes[0x05B4] = 0b1100_0011;
+        file_bytes[0x05B5] = 0xD9;
+        file_bytes[0x05B6] = 0x05;
+
         let mut state = StateBuilder::default().program_counter(pc_start).build();
         state.load_memory(file_bytes);
 
