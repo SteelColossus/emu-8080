@@ -194,7 +194,11 @@ fn main() -> Result<(), String> {
 
             bit_operations::set_bit_in_value(&mut port_2, 0, dip_switches.num_ships_low);
             bit_operations::set_bit_in_value(&mut port_2, 1, dip_switches.num_ships_high);
-            bit_operations::set_bit_in_value(&mut port_2, 3, dip_switches.extra_ship_at_lower_score);
+            bit_operations::set_bit_in_value(
+                &mut port_2,
+                3,
+                dip_switches.extra_ship_at_lower_score,
+            );
             bit_operations::set_bit_in_value(&mut port_2, 7, dip_switches.coin_info_off);
             emulator_state.ports.set_in_port_static_value(2, port_2);
 

@@ -5,3 +5,4 @@ Cargo.lock
 /.vscode
 invaders.*
 /screens
+/cpu_tests
