@@ -40,7 +40,7 @@ fn print_test_output(state: &State) {
             }
         }
         _ => panic!("Unexpected Register C value: {}", register_c),
-    }
+    };
 }
 
 #[cfg(test)]
@@ -49,10 +49,9 @@ mod tests {
     use crate::StateBuilder;
     use std::fs;
 
-    #[test]
-    fn tst8080_test() {
+    fn read_test_file(test_path: &str) -> State {
         let pc_start = 0x0100;
-        let mut file_bytes = fs::read("cpu_tests/TST8080.COM").unwrap();
+        let mut file_bytes = fs::read(test_path).expect("File not found!");
 
         for memory_index in (0..pc_start).rev() {
             let memory_value = match memory_index {
@@ -67,13 +66,55 @@ mod tests {
             file_bytes.insert(0, memory_value);
         }
 
-        // Skip over DAA tests
-        file_bytes[0x05B4] = 0b1100_0011;
-        file_bytes[0x05B5] = 0xD9;
-        file_bytes[0x05B6] = 0x05;
-
         let mut state = StateBuilder::default().program_counter(pc_start).build();
         state.load_memory(file_bytes);
+        state
+    }
+
+    #[test]
+    fn tst8080_test() {
+        let mut state = read_test_file("cpu_tests/TST8080.COM");
+
+        // Skip over DAA tests
+        state.set_value_at_memory_location(0x05B4, 0b1100_0011);
+        state.set_value_at_memory_location(0x05B5, 0xD9);
+        state.set_value_at_memory_location(0x05B6, 0x05);
+
+        'running: loop {
+            let should_quit = run_next_operation(&mut state);
+            if should_quit {
+                break 'running;
+            }
+        }
+    }
+
+    #[test]
+    fn cputest_test() {
+        let mut state = read_test_file("cpu_tests/CPUTEST.COM");
+
+        'running: loop {
+            let should_quit = run_next_operation(&mut state);
+            if should_quit {
+                break 'running;
+            }
+        }
+    }
+
+    #[test]
+    fn _8080pre_test() {
+        let mut state = read_test_file("cpu_tests/8080PRE.COM");
+
+        'running: loop {
+            let should_quit = run_next_operation(&mut state);
+            if should_quit {
+                break 'running;
+            }
+        }
+    }
+
+    #[test]
+    fn _8080exm_test() {
+        let mut state = read_test_file("cpu_tests/8080EXM.COM");
 
         'running: loop {
             let should_quit = run_next_operation(&mut state);
