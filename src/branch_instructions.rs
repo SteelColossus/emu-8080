@@ -347,13 +347,13 @@ mod tests {
     #[test]
     fn pchl_sets_the_program_counter_from_registers() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => -64, Register::L => 63 })
+            .register_values(hashmap! { Register::H => 192, Register::L => 63 })
             .build();
         pchl_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -64, Register::L => 63 })
+                .register_values(hashmap! { Register::H => 192, Register::L => 63 })
                 .program_counter(0xC03F)
                 .build(),
         );

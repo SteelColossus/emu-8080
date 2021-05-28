@@ -22,8 +22,8 @@ pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     let (register_pair_low, register_pair_high) = register_pair.get_low_high_value(state);
-    state.set_value_at_memory_location(sp_minus_one, register_pair_high as u8);
-    state.set_value_at_memory_location(sp_minus_two, register_pair_low as u8);
+    state.set_value_at_memory_location(sp_minus_one, register_pair_high);
+    state.set_value_at_memory_location(sp_minus_two, register_pair_low);
     state.stack_pointer = sp_minus_two;
 }
 
@@ -32,7 +32,7 @@ pub fn push_psw_instruction(state: &mut State) {
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     let accumulator_value = state.get_register_value(Register::A);
-    state.set_value_at_memory_location(sp_minus_one, accumulator_value as u8);
+    state.set_value_at_memory_location(sp_minus_one, accumulator_value);
 
     let mut condition_flag_bits = 0b00000010;
     for (condition_flag, bit_index) in PSW_CONDITION_FLAG_BITS {
@@ -42,7 +42,7 @@ pub fn push_psw_instruction(state: &mut State) {
             state.get_condition_flag_value(condition_flag),
         );
     }
-    state.set_value_at_memory_location(sp_minus_two, condition_flag_bits as u8);
+    state.set_value_at_memory_location(sp_minus_two, condition_flag_bits);
 
     state.stack_pointer = sp_minus_two;
 }
@@ -62,8 +62,8 @@ pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
     let value_for_register_pair_high = state.get_value_at_memory_location(sp_plus_one);
     register_pair.set_low_high_value(
         state,
-        value_for_register_pair_low as i8,
-        value_for_register_pair_high as i8,
+        value_for_register_pair_low,
+        value_for_register_pair_high,
     );
     state.stack_pointer = sp_plus_two;
 }
@@ -78,12 +78,12 @@ pub fn pop_psw_instruction(state: &mut State) {
     for (condition_flag, bit_index) in PSW_CONDITION_FLAG_BITS {
         state.set_condition_flag_value(
             condition_flag,
-            bit_operations::is_bit_set(condition_flag_bits as i8, bit_index),
+            bit_operations::is_bit_set(condition_flag_bits, bit_index),
         );
     }
 
     let accumulator_value = state.get_value_at_memory_location(sp_plus_one);
-    state.set_register(Register::A, accumulator_value as i8);
+    state.set_register(Register::A, accumulator_value);
     state.stack_pointer = sp_plus_two;
 }
 
@@ -94,10 +94,10 @@ pub fn xthl_instruction(state: &mut State) {
     let high_memory_value = state.get_value_at_memory_location(sp_plus_one);
     let l_register_value = state.get_register_value(Register::L);
     let h_register_value = state.get_register_value(Register::H);
-    state.set_register(Register::L, low_memory_value as i8);
-    state.set_value_at_memory_location(state.stack_pointer, l_register_value as u8);
-    state.set_register(Register::H, high_memory_value as i8);
-    state.set_value_at_memory_location(sp_plus_one, h_register_value as u8);
+    state.set_register(Register::L, low_memory_value);
+    state.set_value_at_memory_location(state.stack_pointer, l_register_value);
+    state.set_register(Register::H, high_memory_value);
+    state.set_value_at_memory_location(sp_plus_one, h_register_value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -125,14 +125,14 @@ mod tests {
     #[test]
     fn push_sets_stack_pointer_values_based_on_given_register_pair() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::B => -35, Register::C => 101 })
+            .register_values(hashmap! { Register::B => 221, Register::C => 101 })
             .stack_pointer(0xF028)
             .build();
         push_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::B => -35, Register::C => 101 })
+                .register_values(hashmap! { Register::B => 221, Register::C => 101 })
                 .stack_pointer(0xF026)
                 .memory_values(hashmap! { 0xF026 => 101, 0xF027 => 221 })
                 .build(),
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn push_psw_pushes_the_condition_flag_contents_into_memory() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::A => -89 })
+            .register_values(hashmap! { Register::A => 167 })
             .condition_flag_values(hashmap! {
                 ConditionFlag::Zero => true,
                 ConditionFlag::Sign => false,
@@ -163,7 +163,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::A => -89 })
+                .register_values(hashmap! { Register::A => 167 })
                 .condition_flag_values(hashmap! {
                     ConditionFlag::Zero => true,
                     ConditionFlag::Sign => false,
@@ -187,7 +187,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::D => -52, Register::E => 40 })
+                .register_values(hashmap! { Register::D => 204, Register::E => 40 })
                 .stack_pointer(0x8CCF)
                 .memory_values(
                     hashmap! { 0x8CCC => 102, 0x8CCD => 40, 0x8CCE => 204, 0x8CCF => 16 },
@@ -219,7 +219,7 @@ mod tests {
                     hashmap! { 0x8279 => 194, 0x827A => 0b10101101, 0x827B => 154, 0x827C => 215 },
                 )
                 .stack_pointer(0x827C)
-                .register_values(hashmap! { Register::A => -102 })
+                .register_values(hashmap! { Register::A => 154 })
                 .condition_flag_values(hashmap! {
                     ConditionFlag::Zero => false,
                     ConditionFlag::Sign => true,
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn xthl_exchanges_the_stack_top_with_the_register_values() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => -94, Register::L => 127 })
+            .register_values(hashmap! { Register::H => 162, Register::L => 127 })
             .stack_pointer(0xD39B)
             .memory_values(hashmap! { 0xD39B => 213, 0xD39C => 86 })
             .build();
@@ -242,7 +242,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => 86, Register::L => -43 })
+                .register_values(hashmap! { Register::H => 86, Register::L => 213 })
                 .stack_pointer(0xD39B)
                 .memory_values(hashmap! { 0xD39B => 127, 0xD39C => 162 })
                 .build(),
@@ -252,13 +252,13 @@ mod tests {
     #[test]
     fn sphl_sets_the_stack_pointer_to_register_values() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => 10, Register::L => -100 })
+            .register_values(hashmap! { Register::H => 10, Register::L => 156 })
             .build();
         sphl_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => 10, Register::L => -100 })
+                .register_values(hashmap! { Register::H => 10, Register::L => 156 })
                 .stack_pointer(0x0A9C)
                 .build(),
         );

@@ -12,32 +12,32 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
     let memory_address = RegisterPair::HL.get_full_value(&state);
     let data = state.get_value_at_memory_location(memory_address);
-    mvi_instruction(state, register, data as i8);
+    mvi_instruction(state, register, data);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn mov_to_mem_instruction(state: &mut State, register: Register) {
     let data = state.get_register_value(register);
-    mvi_mem_instruction(state, data as i8);
+    mvi_mem_instruction(state, data);
 }
 
 #[cfg_attr(test, mutate)]
-pub fn mvi_instruction(state: &mut State, register: Register, data: i8) {
+pub fn mvi_instruction(state: &mut State, register: Register, data: u8) {
     state.set_register(register, data);
 }
 
 #[cfg_attr(test, mutate)]
-pub fn mvi_mem_instruction(state: &mut State, data: i8) {
+pub fn mvi_mem_instruction(state: &mut State, data: u8) {
     let memory_address = RegisterPair::HL.get_full_value(&state);
-    state.set_value_at_memory_location(memory_address, data as u8);
+    state.set_value_at_memory_location(memory_address, data);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn lxi_instruction(
     state: &mut State,
     register_pair: RegisterPair,
-    low_data: i8,
-    high_data: i8,
+    low_data: u8,
+    high_data: u8,
 ) {
     register_pair.set_low_high_value(state, low_data, high_data);
 }
@@ -46,14 +46,14 @@ pub fn lxi_instruction(
 pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let memory_location_value = state.get_value_at_memory_location(memory_address);
-    state.set_register(Register::A, memory_location_value as i8);
+    state.set_register(Register::A, memory_location_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.get_register_value(Register::A);
-    state.set_value_at_memory_location(memory_address, accumulator_value as u8);
+    state.set_value_at_memory_location(memory_address, accumulator_value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -62,16 +62,16 @@ pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let second_memory_address = first_memory_address.wrapping_add(1);
     let first_memory_value = state.get_value_at_memory_location(first_memory_address);
     let second_memory_value = state.get_value_at_memory_location(second_memory_address);
-    state.set_register(Register::L, first_memory_value as i8);
-    state.set_register(Register::H, second_memory_value as i8);
+    state.set_register(Register::L, first_memory_value);
+    state.set_register(Register::H, second_memory_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let first_memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
-    let h_register_value = state.get_register_value(Register::H) as u8;
-    let l_register_value = state.get_register_value(Register::L) as u8;
+    let h_register_value = state.get_register_value(Register::H);
+    let l_register_value = state.get_register_value(Register::L);
     state.set_value_at_memory_location(first_memory_address, l_register_value);
     state.set_value_at_memory_location(second_memory_address, h_register_value);
 }
@@ -87,7 +87,7 @@ pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
 
     let memory_address = register_pair.get_full_value(&state);
     let value = state.get_value_at_memory_location(memory_address);
-    state.set_register(Register::A, value as i8);
+    state.set_register(Register::A, value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -101,7 +101,7 @@ pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
 
     let value = state.get_register_value(Register::A);
     let memory_address = register_pair.get_full_value(&state);
-    state.set_value_at_memory_location(memory_address, value as u8);
+    state.set_value_at_memory_location(memory_address, value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn mov_from_mem_moves_from_memory_to_given_register() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => 80, Register::L => -103 })
+            .register_values(hashmap! { Register::H => 80, Register::L => 153 })
             .memory_values(hashmap! { 0x5099 => 187 })
             .build();
         mov_from_mem_instruction(&mut state, Register::B);
@@ -177,7 +177,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(
-                    hashmap! { Register::H => 80, Register::L => -103, Register::B => -69 },
+                    hashmap! { Register::H => 80, Register::L => 153, Register::B => 187 },
                 )
                 .memory_values(hashmap! { 0x5099 => 187 })
                 .build(),
@@ -193,7 +193,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::D => -128 })
+                .register_values(hashmap! { Register::D => 128 })
                 .memory_values(hashmap! { 0x0000 => 128 })
                 .build(),
         );
@@ -202,13 +202,13 @@ mod tests {
     #[test]
     fn mov_from_mem_can_overwrite_with_default_memory() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => -43, Register::L => 75, Register::E => 48 })
+            .register_values(hashmap! { Register::H => 213, Register::L => 75, Register::E => 48 })
             .build();
         mov_from_mem_instruction(&mut state, Register::E);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -43, Register::L => 75 })
+                .register_values(hashmap! { Register::H => 213, Register::L => 75 })
                 .build(),
         );
     }
@@ -216,14 +216,14 @@ mod tests {
     #[test]
     fn mov_from_mem_can_overwrite_register_used_for_memory_location() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => -27, Register::L => 4 })
+            .register_values(hashmap! { Register::H => 229, Register::L => 4 })
             .memory_values(hashmap! { 0xE503 => 76, 0xE504 => 179, 0xE505 => 148 })
             .build();
         mov_from_mem_instruction(&mut state, Register::L);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -27, Register::L => -77 })
+                .register_values(hashmap! { Register::H => 229, Register::L => 179 })
                 .memory_values(hashmap! { 0xE503 => 76, 0xE504 => 179, 0xE505 => 148 })
                 .build(),
         );
@@ -249,14 +249,14 @@ mod tests {
     #[test]
     fn mov_to_mem_can_overwrite_with_default_register() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => 72, Register::L => -56 })
+            .register_values(hashmap! { Register::H => 72, Register::L => 200 })
             .memory_values(hashmap! { 0x48C7 => 53, 0x48C8 => 235, 0x48C9 => 159 })
             .build();
         mov_to_mem_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => 72, Register::L => -56 })
+                .register_values(hashmap! { Register::H => 72, Register::L => 200 })
                 .memory_values(hashmap! { 0x48C7 => 53, 0x48C9 => 159 })
                 .build(),
         );
@@ -307,7 +307,7 @@ mod tests {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 62, Register::L => 13 })
             .build();
-        mvi_mem_instruction(&mut state, -64);
+        mvi_mem_instruction(&mut state, 192);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
@@ -320,11 +320,11 @@ mod tests {
     #[test]
     fn lxi_loads_the_given_data_into_the_given_register_pair() {
         let mut state = State::default();
-        lxi_instruction(&mut state, RegisterPair::BC, 96, -29);
+        lxi_instruction(&mut state, RegisterPair::BC, 96, 227);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::B => -29, Register::C => 96 })
+                .register_values(hashmap! { Register::B => 227, Register::C => 96 })
                 .build(),
         );
     }
@@ -332,7 +332,7 @@ mod tests {
     #[test]
     fn lxi_loads_the_given_data_into_the_stack_pointer() {
         let mut state = State::default();
-        lxi_instruction(&mut state, RegisterPair::SP, -57, 77);
+        lxi_instruction(&mut state, RegisterPair::SP, 199, 77);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default().stack_pointer(0x4DC7).build(),
@@ -348,7 +348,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::A => -42 })
+                .register_values(hashmap! { Register::A => 214 })
                 .memory_values(hashmap! { 0x0040 => 214 })
                 .build(),
         );
@@ -357,13 +357,13 @@ mod tests {
     #[test]
     fn sta_stores_the_accumulator_value_into_the_given_memory_location() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::A => -42 })
+            .register_values(hashmap! { Register::A => 214 })
             .build();
         sta_instruction(&mut state, 0x99, 0x01);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::A => -42 })
+                .register_values(hashmap! { Register::A => 214 })
                 .memory_values(hashmap! { 0x0199 => 214 })
                 .build(),
         );
@@ -378,7 +378,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -80, Register::L => 100 })
+                .register_values(hashmap! { Register::H => 176, Register::L => 100 })
                 .memory_values(hashmap! { 0x592B => 100, 0x592C => 176 })
                 .build(),
         )
@@ -393,7 +393,7 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -69, Register::L => 89 })
+                .register_values(hashmap! { Register::H => 187, Register::L => 89 })
                 .memory_values(hashmap! { 0xFFFF => 89, 0x0000 => 187 })
                 .build(),
         )
@@ -402,13 +402,13 @@ mod tests {
     #[test]
     fn shld_stores_register_values_at_given_and_following_memory_location() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => 106, Register::L => -22 })
+            .register_values(hashmap! { Register::H => 106, Register::L => 234 })
             .build();
         shld_instruction(&mut state, 0xFF, 0xD3);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => 106, Register::L => -22 })
+                .register_values(hashmap! { Register::H => 106, Register::L => 234 })
                 .memory_values(hashmap! { 0xD3FF => 234, 0xD400 => 106 })
                 .build(),
         );
@@ -417,13 +417,13 @@ mod tests {
     #[test]
     fn shld_at_max_memory_location_overflows_around_to_storing_at_first() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::H => -96, Register::L => 69 })
+            .register_values(hashmap! { Register::H => 160, Register::L => 69 })
             .build();
         shld_instruction(&mut state, 0xFF, 0xFF);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::H => -96, Register::L => 69 })
+                .register_values(hashmap! { Register::H => 160, Register::L => 69 })
                 .memory_values(hashmap! { 0xFFFF => 69, 0x0000 => 160 })
                 .build(),
         );
@@ -432,7 +432,7 @@ mod tests {
     #[test]
     fn ldax_loads_memory_location_content_into_the_accumulator() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::D => 43, Register::E => -26 })
+            .register_values(hashmap! { Register::D => 43, Register::E => 230 })
             .memory_values(hashmap! { 0x2BE5 => 27, 0x2BE6 => 107, 0x2BE7 => 243})
             .build();
         ldax_instruction(&mut state, RegisterPair::DE);
@@ -440,7 +440,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(
-                    hashmap! { Register::D => 43, Register::E => -26, Register::A => 107 },
+                    hashmap! { Register::D => 43, Register::E => 230, Register::A => 107 },
                 )
                 .memory_values(hashmap! { 0x2BE5 => 27, 0x2BE6 => 107, 0x2BE7 => 243})
                 .build(),
@@ -465,7 +465,7 @@ mod tests {
     #[test]
     fn ldax_overwrites_accumulator_with_default_memory() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::B => 47, Register::C => 31, Register::A => -9 })
+            .register_values(hashmap! { Register::B => 47, Register::C => 31, Register::A => 247 })
             .build();
         ldax_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
@@ -493,14 +493,14 @@ mod tests {
     #[test]
     fn stax_stores_accumulator_value_into_the_memory_location() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::D => -96, Register::E => 17, Register::A => -34 })
+            .register_values(hashmap! { Register::D => 160, Register::E => 17, Register::A => 222 })
             .build();
         stax_instruction(&mut state, RegisterPair::DE);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
                 .register_values(
-                    hashmap! { Register::D => -96, Register::E => 17, Register::A => -34 },
+                    hashmap! { Register::D => 160, Register::E => 17, Register::A => 222 },
                 )
                 .memory_values(hashmap! { 0xA011 => 222 })
                 .build(),
@@ -525,14 +525,14 @@ mod tests {
     #[test]
     fn stax_overwrites_memory_location_with_default_accumulator() {
         let mut state = StateBuilder::default()
-            .register_values(hashmap! { Register::B => -38, Register::C => 15 })
+            .register_values(hashmap! { Register::B => 218, Register::C => 15 })
             .memory_values(hashmap! { 0xDA0F => 174 })
             .build();
         stax_instruction(&mut state, RegisterPair::BC);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .register_values(hashmap! { Register::B => -38, Register::C => 15 })
+                .register_values(hashmap! { Register::B => 218, Register::C => 15 })
                 .build(),
         );
     }

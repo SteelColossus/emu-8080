@@ -2,7 +2,7 @@
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
-pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
+pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
     if bit_index >= 8 {
         panic!("Invalid bit index of {}", bit_index);
     }
@@ -12,7 +12,7 @@ pub fn is_bit_set(value: i8, bit_index: u8) -> bool {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn set_bit_in_value(value: &mut i8, bit_index: u8, bit_flag: bool) {
+pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
     if bit_index >= 8 {
         panic!("Invalid bit index of {}", bit_index);
     }
@@ -23,7 +23,7 @@ pub fn set_bit_in_value(value: &mut i8, bit_index: u8, bit_flag: bool) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn get_parity(value: i8) -> bool {
+pub fn get_parity(value: u8) -> bool {
     let mut parity = true;
 
     for bit_index in 0..=7 {

@@ -23,7 +23,7 @@ fn print_test_output(state: &State) {
     match register_c {
         2 => {
             let register_e = state.get_register_value(Register::E);
-            print!("{}", register_e as u8 as char);
+            print!("{}", register_e as char);
         }
         9 => {
             let mut memory_address = RegisterPair::DE.get_full_value(state);

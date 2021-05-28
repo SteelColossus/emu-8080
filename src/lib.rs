@@ -27,7 +27,7 @@ pub enum Register {
     L,
 }
 
-pub type RegisterState = HashMap<Register, i8>;
+pub type RegisterState = HashMap<Register, u8>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum RegisterPair {
@@ -39,7 +39,7 @@ pub enum RegisterPair {
 
 impl RegisterPair {
     #[cfg_attr(test, mutate)]
-    pub fn get_low_high_value(&self, state: &State) -> (i8, i8) {
+    pub fn get_low_high_value(&self, state: &State) -> (u8, u8) {
         match self {
             RegisterPair::BC => (
                 state.get_register_value(Register::C),
@@ -56,7 +56,7 @@ impl RegisterPair {
             RegisterPair::SP => {
                 let (low_value, high_value) =
                     bit_operations::split_to_low_high_bytes(state.stack_pointer);
-                (low_value as i8, high_value as i8)
+                (low_value, high_value)
             }
         }
     }
@@ -68,11 +68,11 @@ impl RegisterPair {
         }
 
         let (low_value, high_value) = self.get_low_high_value(state);
-        bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+        bit_operations::concat_low_high_bytes(low_value, high_value)
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_low_high_value(&self, state: &mut State, low_value: i8, high_value: i8) {
+    pub fn set_low_high_value(&self, state: &mut State, low_value: u8, high_value: u8) {
         match self {
             RegisterPair::BC => {
                 state.set_register(Register::C, low_value);
@@ -87,8 +87,7 @@ impl RegisterPair {
                 state.set_register(Register::H, high_value);
             }
             RegisterPair::SP => {
-                state.stack_pointer =
-                    bit_operations::concat_low_high_bytes(low_value as u8, high_value as u8)
+                state.stack_pointer = bit_operations::concat_low_high_bytes(low_value, high_value)
             }
         };
     }
@@ -100,7 +99,7 @@ impl RegisterPair {
         }
 
         let (low_value, high_value) = bit_operations::split_to_low_high_bytes(value);
-        self.set_low_high_value(state, low_value as i8, high_value as i8);
+        self.set_low_high_value(state, low_value, high_value);
     }
 }
 
@@ -168,23 +167,23 @@ impl ConditionFlags {
 }
 
 pub trait Ports {
-    fn read_in_port(&self, port_number: u8) -> i8;
-    fn write_out_port(&mut self, port_number: u8, value: i8);
-    fn get_in_port_static_value(&self, port_number: u8) -> Option<i8>;
-    fn set_in_port_static_value(&mut self, port_number: u8, value: i8);
+    fn read_in_port(&self, port_number: u8) -> u8;
+    fn write_out_port(&mut self, port_number: u8, value: u8);
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8>;
+    fn set_in_port_static_value(&mut self, port_number: u8, value: u8);
 }
 
 struct DefaultPorts;
 
 impl Ports for DefaultPorts {
-    fn read_in_port(&self, _port_number: u8) -> i8 {
+    fn read_in_port(&self, _port_number: u8) -> u8 {
         0
     }
-    fn write_out_port(&mut self, _port_number: u8, _value: i8) {}
-    fn get_in_port_static_value(&self, _port_number: u8) -> Option<i8> {
+    fn write_out_port(&mut self, _port_number: u8, _value: u8) {}
+    fn get_in_port_static_value(&self, _port_number: u8) -> Option<u8> {
         None
     }
-    fn set_in_port_static_value(&mut self, _port_number: u8, _value: i8) {}
+    fn set_in_port_static_value(&mut self, _port_number: u8, _value: u8) {}
 }
 
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;
@@ -236,17 +235,17 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    fn get_register_mut(&mut self, register: Register) -> &mut i8 {
+    fn get_register_mut(&mut self, register: Register) -> &mut u8 {
         self.registers.get_mut(&register).unwrap()
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn get_register_value(&self, register: Register) -> i8 {
+    pub fn get_register_value(&self, register: Register) -> u8 {
         *self.registers.get(&register).unwrap()
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_register(&mut self, register: Register, value: i8) {
+    pub fn set_register(&mut self, register: Register, value: u8) {
         let register_to_set = self.get_register_mut(register);
         *register_to_set = value;
     }
@@ -283,7 +282,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn increase_register(&mut self, register: Register, relative_value: i8) -> bool {
+    pub fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
         *register_to_adjust = result;
@@ -291,7 +290,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn decrease_register(&mut self, register: Register, relative_value: i8) -> bool {
+    pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
         let register_to_adjust = self.get_register_mut(register);
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
         *register_to_adjust = result;
@@ -302,10 +301,10 @@ impl State {
     pub fn set_register_by_function_with_value<F>(
         &mut self,
         target_register: Register,
-        value: i8,
+        value: u8,
         f: F,
     ) where
-        F: FnOnce(i8, i8) -> i8,
+        F: FnOnce(u8, u8) -> u8,
     {
         let target_register_value = self.get_register_value(target_register);
         self.set_register(target_register, f(value, target_register_value));
@@ -320,7 +319,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn set_condition_flags_from_result(&mut self, result: i8) {
+    pub fn set_condition_flags_from_result(&mut self, result: u8) {
         self.condition_flags.zero = result == 0;
         self.condition_flags.sign = bit_operations::is_bit_set(result, 7);
         self.condition_flags.parity = bit_operations::get_parity(result);
@@ -615,7 +614,6 @@ mod tests {
         assert_state_is_as_expected(&state, &State::default());
     }
 
-    #[allow(overflowing_literals)]
     #[test]
     fn stack_pointer_value_returned_by_register_pair_is_same_as_actual_value() {
         let state = StateBuilder::default().stack_pointer(0xF00F).build();

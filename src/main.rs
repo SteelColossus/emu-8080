@@ -71,44 +71,43 @@ impl Default for SpaceInvadersPorts {
 }
 
 impl Ports for SpaceInvadersPorts {
-    fn read_in_port(&self, port_number: u8) -> i8 {
+    fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
-            1 => self.port_1 as i8,
-            2 => self.port_2 as i8,
+            1 => self.port_1,
+            2 => self.port_2,
             3 => {
                 ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
-                    >> (8 - self.shift_amount)) as i8
+                    >> (8 - self.shift_amount)) as u8
             }
             _ => panic!("Can't handle Port {}", port_number),
         }
     }
 
-    fn write_out_port(&mut self, port_number: u8, value: i8) {
+    fn write_out_port(&mut self, port_number: u8, value: u8) {
         match port_number {
             3 | 5 => {}
-            2 => self.shift_amount = value as u8 & 0b0000_0111,
+            2 => self.shift_amount = value & 0b0000_0111,
             4 => {
                 let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
-                self.shift_data =
-                    bit_operations::concat_low_high_bytes(high_shift_data, value as u8);
+                self.shift_data = bit_operations::concat_low_high_bytes(high_shift_data, value);
             }
-            6 => self.watchdog = value as u8,
+            6 => self.watchdog = value,
             _ => panic!("Can't handle Port {}", port_number),
         };
     }
 
-    fn get_in_port_static_value(&self, port_number: u8) -> Option<i8> {
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8> {
         match port_number {
-            1 => Some(self.port_1 as i8),
-            2 => Some(self.port_2 as i8),
+            1 => Some(self.port_1),
+            2 => Some(self.port_2),
             _ => None,
         }
     }
 
-    fn set_in_port_static_value(&mut self, port_number: u8, value: i8) {
+    fn set_in_port_static_value(&mut self, port_number: u8, value: u8) {
         match port_number {
-            1 => self.port_1 = value as u8,
-            2 => self.port_2 = value as u8,
+            1 => self.port_1 = value,
+            2 => self.port_2 = value,
             _ => {}
         }
     }
@@ -267,7 +266,7 @@ fn set_row_byte_pixels(
     memory_value: u8,
 ) {
     for bit_index in 0_u8..=7_u8 {
-        let is_bit_set = emu_8080::bit_operations::is_bit_set(memory_value as i8, bit_index);
+        let is_bit_set = emu_8080::bit_operations::is_bit_set(memory_value, bit_index);
 
         if is_bit_set {
             let screen_row = screen_row_byte * 8 + (7 - bit_index) as u32;
