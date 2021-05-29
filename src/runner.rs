@@ -1,9 +1,10 @@
+#[cfg(test)]
+use mutagen::mutate;
+
 use crate::{
     arithmetic_instructions, branch_instructions, logical_instructions, stack_instructions,
     transfer_instructions, Operation, Register, State,
 };
-#[cfg(test)]
-use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
 pub fn run_operation(
@@ -156,4 +157,10 @@ pub fn run_operation(
     if !is_low_data_required && additional_byte_1.is_some() {
         panic!("Expected byte 1 to not be present but it was");
     }
+}
+
+pub fn run_next_operation(state: &mut State) {
+    let memory_value = state.get_memory_value_at_program_counter();
+    let operation = crate::disassembler::disassemble_op_code(memory_value);
+    state.run_operation(operation);
 }

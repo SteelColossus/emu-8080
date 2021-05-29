@@ -1,11 +1,13 @@
-use emu_8080::{bit_operations, Ports, State};
+use std::fs;
+use std::time::{Duration, Instant};
+
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Texture, WindowCanvas};
 use sdl2::EventPump;
-use std::fs;
-use std::time::{Duration, Instant};
+
+use emu_8080::{bit_operations, runner, Ports, State};
 
 const FRAME_RATE: u64 = 60;
 const SCREEN_WIDTH: u32 = 224;
@@ -148,7 +150,7 @@ fn main() -> Result<(), String> {
     let mut current_screen_line: u32 = 0;
 
     'running: loop {
-        run_next_operation(&mut emulator_state);
+        runner::run_next_operation(&mut emulator_state);
 
         let duration = timer.elapsed();
 
@@ -209,12 +211,6 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn run_next_operation(state: &mut State) {
-    let memory_value = state.get_memory_value_at_program_counter();
-    let operation = emu_8080::disassembler::disassemble_op_code(memory_value);
-    state.run_operation(operation);
 }
 
 fn raise_interrupt(state: &mut State, reset_index: u8) {
