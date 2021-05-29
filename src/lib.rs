@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::debug;
 use maplit::hashmap;
 #[cfg(test)]
 use mutagen::mutate;
@@ -352,16 +353,16 @@ impl State {
         }
 
         if let (Some(byte_1), Some(byte_2)) = (additional_byte_1, additional_byte_2) {
-            println!(
+            debug!(
                 "{:04X?} {:?} {:04X?}",
                 op_code_pc,
                 operation,
                 bit_operations::concat_low_high_bytes(byte_1, byte_2)
             );
         } else if let Some(byte_1) = additional_byte_1 {
-            println!("{:04X?} {:?} {:02X?}", op_code_pc, operation, byte_1);
+            debug!("{:04X?} {:?} {:02X?}", op_code_pc, operation, byte_1);
         } else {
-            println!("{:04X?} {:?}", op_code_pc, operation);
+            debug!("{:04X?} {:?}", op_code_pc, operation);
         }
 
         runner::run_operation(&operation, self, additional_byte_1, additional_byte_2);
@@ -369,13 +370,13 @@ impl State {
         const DISPLAY_MEMORY_FOOTPRINT: bool = false;
 
         if operation != Operation::Nop {
-            println!(
+            debug!(
                 "## pc: {:04X?}, sp: {:04X?}, registers: {:?}, {:?} ##",
                 self.program_counter, self.stack_pointer, self.registers, self.condition_flags
             );
 
             if DISPLAY_MEMORY_FOOTPRINT {
-                println!("## memory: {:?} ##", self.memory_footprint);
+                debug!("## memory: {:?} ##", self.memory_footprint);
             }
         }
     }

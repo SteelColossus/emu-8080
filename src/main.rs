@@ -1,6 +1,7 @@
 use std::fs;
 use std::time::{Duration, Instant};
 
+use log::debug;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{Color, PixelFormatEnum};
@@ -93,7 +94,10 @@ impl Ports for SpaceInvadersPorts {
                 let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
                 self.shift_data = bit_operations::concat_low_high_bytes(high_shift_data, value);
             }
-            6 => self.watchdog = value,
+            6 => {
+                self.watchdog = value;
+                debug!("Watchdog: {}", self.watchdog);
+            }
             _ => panic!("Can't handle Port {}", port_number),
         };
     }
@@ -116,6 +120,8 @@ impl Ports for SpaceInvadersPorts {
 }
 
 fn main() -> Result<(), String> {
+    env_logger::init();
+
     let file_bytes = fs::read("invaders.bin").unwrap();
     let mut emulator_state = State::default();
     emulator_state.load_memory(file_bytes);
@@ -215,7 +221,7 @@ fn main() -> Result<(), String> {
 
 fn raise_interrupt(state: &mut State, reset_index: u8) {
     if state.are_interrupts_enabled {
-        println!("-- Raised interrupt with reset index of {} --", reset_index);
+        debug!("-- Raised interrupt with reset index of {} --", reset_index);
         emu_8080::branch_instructions::rst_instruction(state, reset_index);
     }
 }
