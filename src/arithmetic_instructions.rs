@@ -139,6 +139,31 @@ pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
     state.condition_flags.carry = carry;
 }
 
+#[cfg_attr(test, mutate)]
+pub fn daa_instruction(state: &mut State) {
+    let mut result = state.get_register_value(Register::A);
+    let mut carry = false;
+    let lower_nibble = result & 0b0000_1111;
+
+    if lower_nibble > 9 || state.condition_flags.auxiliary_carry {
+        let (result_from_op, carry_from_op) = result.overflowing_add(6);
+        result = result_from_op;
+        carry |= carry_from_op;
+    }
+
+    let higher_nibble = (result & 0b1111_0000) >> 4;
+
+    if higher_nibble > 9 || state.condition_flags.carry {
+        let (result_from_op, carry_from_op) = result.overflowing_add(6 << 4);
+        result = result_from_op;
+        carry |= carry_from_op;
+    }
+
+    state.set_register(Register::A, result);
+    state.set_condition_flags_from_result(result);
+    state.condition_flags.carry = carry;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1091,6 +1116,147 @@ mod tests {
             &StateBuilder::default()
                 .register_values(hashmap! { Register::D => 146, Register::E => 208 })
                 .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_does_nothing_if_no_conditions_are_met() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1001_1001 })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b1001_1001 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_adds_to_lower_nibble_if_greater_than_threshold() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b0111_1010 })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b1000_0000 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_adds_to_lower_nibble_if_auxiliary_carry_flag_is_set() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1001_1001 })
+            .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b1001_1111 })
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Parity => true,
+                    // NOTE: This actually may be incorrect, but since we aren't setting or unsetting this flag
+                    // anywhere at the moment let's keep this behaviour for now
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_adds_to_higher_nibble_if_greater_than_threshold() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1010_1001 })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b0000_1001 })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+                )
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_adds_to_higher_nibble_if_carry_flag_is_set() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b0001_1001 })
+            .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b0111_1001 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_adds_to_both_nibbles_if_both_conditions_are_met() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1111_0011 })
+            .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b0101_1001 })
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::Carry => true,
+                    // NOTE: This actually may be incorrect, but since we aren't setting or unsetting this flag
+                    // anywhere at the moment let's keep this behaviour for now
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_lower_nibble_can_fulfill_threshold_for_higher_nibble() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1001_1011 })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b0000_0001 })
+                .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn daa_can_carry_from_add_to_lower_nibble() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b1111_1010 })
+            .build();
+        daa_instruction(&mut state);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::Carry => true,
+                })
                 .build(),
         );
     }

@@ -89,9 +89,7 @@ pub fn run_operation(
         Operation::Dad(register_pair) => {
             arithmetic_instructions::dad_instruction(state, *register_pair)
         }
-        Operation::Daa => println!(
-            "-- Skipping over UNIMPLEMENTED instruction - this may cause incorrect behaviour! --"
-        ),
+        Operation::Daa => arithmetic_instructions::daa_instruction(state),
         Operation::Ana(register) => logical_instructions::ana_instruction(state, *register),
         Operation::AnaMem => logical_instructions::ana_mem_instruction(state),
         Operation::Ani => logical_instructions::ani_instruction(state, get_low_data()),
