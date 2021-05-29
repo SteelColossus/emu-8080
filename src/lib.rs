@@ -9,7 +9,6 @@ pub mod arithmetic_instructions;
 pub mod base_test_functions;
 pub mod bit_operations;
 pub mod branch_instructions;
-mod cpu_tests;
 pub mod disassembler;
 pub mod logical_instructions;
 pub mod runner;
