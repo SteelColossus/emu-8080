@@ -30,21 +30,6 @@ struct Inputs {
     pub p2_right: bool,
 }
 
-impl Inputs {
-    fn reset(&mut self) {
-        self.credit = false;
-        self.tilt = false;
-        self.p1_start = false;
-        self.p1_shoot = false;
-        self.p1_left = false;
-        self.p1_right = false;
-        self.p2_start = false;
-        self.p2_shoot = false;
-        self.p2_left = false;
-        self.p2_right = false;
-    }
-}
-
 #[derive(Default)]
 struct DipSwitches {
     pub num_ships_low: bool,
@@ -208,8 +193,6 @@ fn main() -> Result<(), String> {
             );
             bit_operations::set_bit_in_value(&mut port_2, 7, dip_switches.coin_info_off);
             emulator_state.ports.set_in_port_static_value(2, port_2);
-
-            inputs.reset();
         }
 
         // Crude assumption of each instruction taking 2 cycles on a 2MHz processor for the time being
@@ -320,11 +303,23 @@ fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
             } => {
                 inputs.credit = true;
             }
+            Event::KeyUp {
+                keycode: Some(Keycode::RShift),
+                ..
+            } => {
+                inputs.credit = false;
+            }
             Event::KeyDown {
                 keycode: Some(Keycode::Backquote),
                 ..
             } => {
                 inputs.tilt = true;
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Backquote),
+                ..
+            } => {
+                inputs.tilt = false;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Return),
@@ -332,11 +327,23 @@ fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
             } => {
                 inputs.p1_start = true;
             }
+            Event::KeyUp {
+                keycode: Some(Keycode::Return),
+                ..
+            } => {
+                inputs.p1_start = false;
+            }
             Event::KeyDown {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
                 inputs.p1_shoot = true;
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                inputs.p1_shoot = false;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Left),
@@ -344,11 +351,23 @@ fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
             } => {
                 inputs.p1_left = true;
             }
+            Event::KeyUp {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                inputs.p1_left = false;
+            }
             Event::KeyDown {
                 keycode: Some(Keycode::Right),
                 ..
             } => {
                 inputs.p1_right = true;
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                inputs.p1_right = false;
             }
             _ => {}
         }
