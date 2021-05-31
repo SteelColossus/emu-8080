@@ -91,6 +91,8 @@ pub fn cpi_instruction(state: &mut State, data: u8) {
     let result = accumulator_value.wrapping_sub(data);
     state.set_condition_flags_from_result(result);
     state.condition_flags.carry = accumulator_value < data;
+    state.condition_flags.auxiliary_carry =
+        bit_operations::calculate_auxiliary_carry(accumulator_value, data, true);
 }
 
 #[cfg_attr(test, mutate)]
@@ -503,7 +505,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 24, Register::E => 48 })
-                .condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true })
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::Carry => true,
+                })
                 .build(),
         );
     }
@@ -543,9 +549,11 @@ mod tests {
                     hashmap! { Register::A => 51, Register::H => 120, Register::L => 113 },
                 )
                 .memory_values(hashmap! { 0x7871 => 253 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Parity => true, ConditionFlag::Carry => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -577,7 +585,12 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 196 })
-                .condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true, ConditionFlag::Carry => true })
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
