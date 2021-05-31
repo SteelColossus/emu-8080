@@ -203,8 +203,6 @@ pub struct State {
     pub stack_pointer: u16,
     memory: [u8; MEMORY_SIZE],
     pub are_interrupts_enabled: bool,
-    memory_footprint: HashMap<u16, u8>,
-    is_memory_loaded: bool,
     pub ports: Box<dyn Ports>,
 }
 
@@ -263,7 +261,6 @@ impl State {
         for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
             self.set_value_at_memory_location(memory_address as u16, *memory_value);
         }
-        self.is_memory_loaded = true;
     }
 
     #[cfg_attr(test, mutate)]
@@ -279,14 +276,6 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn set_value_at_memory_location(&mut self, memory_address: u16, value: u8) {
         self.memory[memory_address as usize] = value;
-
-        if self.is_memory_loaded {
-            if value == 0 {
-                self.memory_footprint.remove(&memory_address);
-            } else {
-                self.memory_footprint.insert(memory_address, value);
-            }
-        }
     }
 
     #[cfg_attr(test, mutate)]
@@ -388,33 +377,25 @@ impl State {
             self.program_counter += 1;
         }
 
-        if let (Some(byte_1), Some(byte_2)) = (additional_byte_1, additional_byte_2) {
-            debug!(
-                "{:04X?} {:?} {:04X?}",
-                op_code_pc,
-                operation,
-                bit_operations::concat_low_high_bytes(byte_1, byte_2)
-            );
-        } else if let Some(byte_1) = additional_byte_1 {
-            debug!("{:04X?} {:?} {:02X?}", op_code_pc, operation, byte_1);
-        } else {
-            debug!("{:04X?} {:?}", op_code_pc, operation);
-        }
+        debug!(
+            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}\t({:02X} {:02X} {:02X} {:02X})",
+            op_code_pc,
+            bit_operations::concat_low_high_bytes(
+                self.get_condition_flag_byte(),
+                self.get_register_value(Register::A)
+            ),
+            RegisterPair::BC.get_full_value(self),
+            RegisterPair::DE.get_full_value(self),
+            RegisterPair::HL.get_full_value(self),
+            self.stack_pointer,
+            0, // No cycle tracking as of yet
+            self.get_value_at_memory_location(op_code_pc),
+            self.get_value_at_memory_location(op_code_pc + 1),
+            self.get_value_at_memory_location(op_code_pc + 2),
+            self.get_value_at_memory_location(op_code_pc + 3),
+        );
 
         runner::run_operation(&operation, self, additional_byte_1, additional_byte_2);
-
-        const DISPLAY_MEMORY_FOOTPRINT: bool = false;
-
-        if operation != Operation::Nop {
-            debug!(
-                "## pc: {:04X?}, sp: {:04X?}, registers: {:?}, {:?} ##",
-                self.program_counter, self.stack_pointer, self.registers, self.condition_flags
-            );
-
-            if DISPLAY_MEMORY_FOOTPRINT {
-                debug!("## memory: {:?} ##", self.memory_footprint);
-            }
-        }
     }
 }
 
@@ -512,8 +493,6 @@ impl StateBuilder {
             stack_pointer: self.stack_pointer.unwrap_or(0x0000),
             memory,
             are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
-            memory_footprint: HashMap::new(),
-            is_memory_loaded: false,
             ports: Box::new(DefaultPorts),
         }
     }

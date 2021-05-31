@@ -4,9 +4,12 @@ use std::fs;
 fn run_next_operation(state: &mut State) -> bool {
     let memory_value = state.get_memory_value_at_program_counter();
     let operation = disassembler::disassemble_op_code(memory_value);
+    let is_out_operation = operation == Operation::Out;
 
-    if operation == Operation::Out {
-        let port_number = state.get_value_at_memory_location(state.program_counter + 1);
+    state.run_operation(operation);
+
+    if is_out_operation {
+        let port_number = state.get_value_at_memory_location(state.program_counter - 1);
         match port_number {
             0 => return true,
             1 => print_test_output(state),
@@ -14,7 +17,6 @@ fn run_next_operation(state: &mut State) -> bool {
         };
     }
 
-    state.run_operation(operation);
     false
 }
 
@@ -66,8 +68,13 @@ fn read_test_file(test_path: &str) -> State {
     state
 }
 
+fn init() {
+    let _ = env_logger::builder().is_test(true).try_init();
+}
+
 #[test]
 fn cpu_test_tst8080() {
+    init();
     let mut state = read_test_file("cpu_tests/TST8080.COM");
 
     'running: loop {
