@@ -282,19 +282,23 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn increase_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn increase_register(&mut self, register: Register, relative_value: u8) -> (bool, bool) {
         let register_to_adjust = self.get_register_mut(register);
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
+        let auxiliary_carry =
+            bit_operations::calculate_auxiliary_carry(*register_to_adjust, relative_value, false);
         *register_to_adjust = result;
-        carry
+        (carry, auxiliary_carry)
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> bool {
+    pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> (bool, bool) {
         let register_to_adjust = self.get_register_mut(register);
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
+        let auxiliary_borrow =
+            bit_operations::calculate_auxiliary_carry(*register_to_adjust, relative_value, true);
         *register_to_adjust = result;
-        borrow
+        (borrow, auxiliary_borrow)
     }
 
     #[cfg_attr(test, mutate)]
