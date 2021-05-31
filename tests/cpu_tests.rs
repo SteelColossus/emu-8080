@@ -70,11 +70,6 @@ fn read_test_file(test_path: &str) -> State {
 fn cpu_test_tst8080() {
     let mut state = read_test_file("cpu_tests/TST8080.COM");
 
-    // Skip over DAA tests by a JMP to 0x05D9
-    state.set_value_at_memory_location(0x05B4, 0xC3);
-    state.set_value_at_memory_location(0x05B5, 0xD9);
-    state.set_value_at_memory_location(0x05B6, 0x05);
-
     'running: loop {
         let should_quit = run_next_operation(&mut state);
         if should_quit {
