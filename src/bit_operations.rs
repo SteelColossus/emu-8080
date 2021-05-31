@@ -42,7 +42,19 @@ pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
 
 #[cfg_attr(test, mutate)]
 pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
-    ((value & 0x00FF) as u8, (value >> 8) as u8)
+    ((value & 0b0000_0000_1111_1111) as u8, (value >> 8) as u8)
+}
+
+#[cfg_attr(test, mutate)]
+pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool) -> bool {
+    let lower_value_1 = value_1 & 0b0000_1111;
+    let lower_value_2 = value_2 & 0b0000_1111;
+    let result = if is_subtraction {
+        lower_value_1.wrapping_sub(lower_value_2)
+    } else {
+        lower_value_1.wrapping_add(lower_value_2)
+    };
+    result & 0b0001_0000 == 0b0001_0000
 }
 
 #[cfg(test)]
