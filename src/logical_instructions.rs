@@ -241,7 +241,9 @@ mod tests {
     #[test]
     fn ani_clears_the_carry_and_auxiliary_carry_flags() {
         let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         ani_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
@@ -289,7 +291,9 @@ mod tests {
     #[test]
     fn xra_clears_the_carry_and_auxiliary_carry_flags() {
         let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         xra_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
@@ -309,7 +313,9 @@ mod tests {
                 hashmap! { Register::A => 0b01010101, Register::H => 30, Register::L => 49 },
             )
             .memory_values(hashmap! { 0x1E31 => 0b11011011 })
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         xra_mem_instruction(&mut state);
         assert_state_is_as_expected(
@@ -346,7 +352,9 @@ mod tests {
     #[test]
     fn xri_clears_the_carry_and_auxiliary_carry_flags() {
         let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         xri_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(
@@ -394,7 +402,9 @@ mod tests {
     #[test]
     fn ora_clears_the_carry_and_auxiliary_carry_flags() {
         let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         ora_instruction(&mut state, Register::A);
         assert_state_is_as_expected(
@@ -414,7 +424,9 @@ mod tests {
                 hashmap! { Register::A => 0b01010101, Register::H => 227, Register::L => 137 },
             )
             .memory_values(hashmap! { 0xE389 => 0b11011011 })
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         ora_mem_instruction(&mut state);
         assert_state_is_as_expected(
@@ -449,7 +461,9 @@ mod tests {
     #[test]
     fn ori_clears_the_carry_and_auxiliary_carry_flags() {
         let mut state = StateBuilder::default()
-            .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+            .condition_flag_values(
+                hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true },
+            )
             .build();
         ori_instruction(&mut state, 0b00000000);
         assert_state_is_as_expected(

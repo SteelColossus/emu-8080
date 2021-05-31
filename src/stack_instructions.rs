@@ -2,14 +2,6 @@ use crate::{bit_operations, ConditionFlag, Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
-const PSW_CONDITION_FLAG_BITS: [(ConditionFlag, u8); 5] = [
-    (ConditionFlag::Carry, 0),
-    (ConditionFlag::Parity, 2),
-    (ConditionFlag::AuxiliaryCarry, 4),
-    (ConditionFlag::Zero, 6),
-    (ConditionFlag::Sign, 7),
-];
-
 #[cfg_attr(test, mutate)]
 pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::SP {
@@ -33,17 +25,8 @@ pub fn push_psw_instruction(state: &mut State) {
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     let accumulator_value = state.get_register_value(Register::A);
     state.set_value_at_memory_location(sp_minus_one, accumulator_value);
-
-    let mut condition_flag_bits = 0b00000010;
-    for (condition_flag, bit_index) in PSW_CONDITION_FLAG_BITS {
-        bit_operations::set_bit_in_value(
-            &mut condition_flag_bits,
-            bit_index,
-            state.get_condition_flag_value(condition_flag),
-        );
-    }
-    state.set_value_at_memory_location(sp_minus_two, condition_flag_bits);
-
+    let condition_flag_byte = state.get_condition_flag_byte();
+    state.set_value_at_memory_location(sp_minus_two, condition_flag_byte);
     state.stack_pointer = sp_minus_two;
 }
 
@@ -72,16 +55,7 @@ pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
 pub fn pop_psw_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
-
-    let condition_flag_bits = state.get_value_at_memory_location(state.stack_pointer);
-
-    for (condition_flag, bit_index) in PSW_CONDITION_FLAG_BITS {
-        state.set_condition_flag_value(
-            condition_flag,
-            bit_operations::is_bit_set(condition_flag_bits, bit_index),
-        );
-    }
-
+    state.set_condition_flag_byte(state.stack_pointer);
     let accumulator_value = state.get_value_at_memory_location(sp_plus_one);
     state.set_register(Register::A, accumulator_value);
     state.stack_pointer = sp_plus_two;

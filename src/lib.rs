@@ -188,6 +188,14 @@ impl Ports for DefaultPorts {
 
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;
 
+const CONDITION_FLAG_BITS: [(ConditionFlag, u8); 5] = [
+    (ConditionFlag::Carry, 0),
+    (ConditionFlag::Parity, 2),
+    (ConditionFlag::AuxiliaryCarry, 4),
+    (ConditionFlag::Zero, 6),
+    (ConditionFlag::Sign, 7),
+];
+
 pub struct State {
     registers: RegisterState,
     pub condition_flags: ConditionFlags,
@@ -333,6 +341,30 @@ impl State {
     pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
         let register_value = self.get_register_value(register);
         self.set_condition_flags_from_result(register_value);
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_condition_flag_byte(&self) -> u8 {
+        let mut condition_flag_byte = 0b00000010;
+        for (condition_flag, bit_index) in CONDITION_FLAG_BITS {
+            bit_operations::set_bit_in_value(
+                &mut condition_flag_byte,
+                bit_index,
+                self.get_condition_flag_value(condition_flag),
+            );
+        }
+        condition_flag_byte
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_condition_flag_byte(&mut self, memory_address: u16) {
+        let condition_flag_byte = self.get_value_at_memory_location(memory_address);
+        for (condition_flag, bit_index) in CONDITION_FLAG_BITS {
+            self.set_condition_flag_value(
+                condition_flag,
+                bit_operations::is_bit_set(condition_flag_byte, bit_index),
+            );
+        }
     }
 
     #[cfg_attr(test, mutate)]
