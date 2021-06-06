@@ -1,14 +1,17 @@
+use std::collections::HashMap;
 use std::fs;
 use std::time::{Duration, Instant};
 
+use emu_8080::{bit_operations, runner, Ports, State};
 use log::debug;
+use maplit::hashmap;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::mixer;
+use sdl2::mixer::{Channel, Chunk};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Texture, WindowCanvas};
 use sdl2::EventPump;
-
-use emu_8080::{bit_operations, runner, Ports, State};
 
 const FRAME_RATE: u64 = 60;
 const SCREEN_WIDTH: u32 = 224;
@@ -38,12 +41,28 @@ struct DipSwitches {
     pub coin_info_off: bool,
 }
 
+#[derive(Eq, PartialEq, Hash)]
+enum SoundName {
+    Shoot,
+    PlayerKilled,
+    InvaderKilled,
+    UfoFly,
+    UfoKilled,
+    InvaderMovement1,
+    InvaderMovement2,
+    InvaderMovement3,
+    InvaderMovement4,
+}
+
 struct SpaceInvadersPorts {
     shift_data: u16,
     shift_amount: u8,
     port_1: u8,
     port_2: u8,
+    port_3: u8,
+    port_5: u8,
     watchdog: u8,
+    sound_map: HashMap<SoundName, Chunk>,
 }
 
 impl Default for SpaceInvadersPorts {
@@ -53,7 +72,10 @@ impl Default for SpaceInvadersPorts {
             shift_amount: 0b0000_0000,
             port_1: 0b0000_1000,
             port_2: 0b0000_0000,
+            port_3: 0b0000_0000,
+            port_5: 0b0000_0000,
             watchdog: 0b0000_0000,
+            sound_map: HashMap::new(),
         }
     }
 }
@@ -73,7 +95,33 @@ impl Ports for SpaceInvadersPorts {
 
     fn write_out_port(&mut self, port_number: u8, value: u8) {
         match port_number {
-            3 | 5 => {}
+            3 => {
+                self.play_sounds_if_needed(
+                    self.port_3,
+                    value,
+                    hashmap! {
+                        0 => &SoundName::UfoFly,
+                        1 => &SoundName::Shoot,
+                        2 => &SoundName::PlayerKilled,
+                        3 => &SoundName::InvaderKilled,
+                    },
+                );
+                self.port_3 = value;
+            }
+            5 => {
+                self.play_sounds_if_needed(
+                    self.port_5,
+                    value,
+                    hashmap! {
+                        0 => &SoundName::InvaderMovement1,
+                        1 => &SoundName::InvaderMovement2,
+                        2 => &SoundName::InvaderMovement3,
+                        3 => &SoundName::InvaderMovement4,
+                        4 => &SoundName::UfoKilled,
+                    },
+                );
+                self.port_5 = value;
+            }
             2 => self.shift_amount = value & 0b0000_0111,
             4 => {
                 let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
@@ -104,16 +152,68 @@ impl Ports for SpaceInvadersPorts {
     }
 }
 
+impl SpaceInvadersPorts {
+    fn with_sound_map(sound_map: HashMap<SoundName, String>) -> Self {
+        let mut ports = SpaceInvadersPorts::default();
+
+        for (sound_name, file_path) in sound_map {
+            let mut sound_chunk = Chunk::from_file(file_path).unwrap();
+            sound_chunk.set_volume(mixer::MAX_VOLUME / 2);
+            ports.sound_map.insert(sound_name, sound_chunk);
+        }
+
+        ports
+    }
+
+    fn play_sounds_if_needed(
+        &self,
+        port_value: u8,
+        new_value: u8,
+        bit_index_to_sound_name_map: HashMap<u8, &SoundName>,
+    ) {
+        for (bit_index, sound_name) in bit_index_to_sound_name_map {
+            if bit_operations::is_bit_set(new_value, bit_index)
+                && !bit_operations::is_bit_set(port_value, bit_index)
+            {
+                self.play_sound(sound_name);
+            }
+        }
+    }
+
+    fn play_sound(&self, sound_name: &SoundName) {
+        let sound_chunk_result = self.sound_map.get(sound_name);
+
+        if let Some(sound_chunk) = sound_chunk_result {
+            let _ = Channel::all().play(&sound_chunk, 0);
+        }
+    }
+}
+
 fn main() -> Result<(), String> {
     env_logger::init();
 
     let file_bytes = fs::read("invaders.bin").unwrap();
     let mut emulator_state = State::default();
     emulator_state.load_memory(file_bytes);
-    emulator_state.ports = Box::new(SpaceInvadersPorts::default());
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
+    // Based on audio file bitrate of 88kbps
+    mixer::open_audio(11_025, mixer::AUDIO_U8, 1, 1_024)?;
+
+    const AUDIO_FOLDER_PATH: &str = "audio/";
+    let ports = SpaceInvadersPorts::with_sound_map(hashmap! {
+        SoundName::Shoot => AUDIO_FOLDER_PATH.to_owned() + "shoot.wav",
+        SoundName::PlayerKilled => AUDIO_FOLDER_PATH.to_owned() + "explosion.wav",
+        SoundName::InvaderKilled => AUDIO_FOLDER_PATH.to_owned() + "invaderkilled.wav",
+        SoundName::UfoFly => AUDIO_FOLDER_PATH.to_owned() + "ufo_lowpitch.wav",
+        SoundName::UfoKilled => AUDIO_FOLDER_PATH.to_owned() + "ufo_highpitch.wav",
+        SoundName::InvaderMovement1 => AUDIO_FOLDER_PATH.to_owned() + "fastinvader1.wav",
+        SoundName::InvaderMovement2 => AUDIO_FOLDER_PATH.to_owned() + "fastinvader2.wav",
+        SoundName::InvaderMovement3 => AUDIO_FOLDER_PATH.to_owned() + "fastinvader3.wav",
+        SoundName::InvaderMovement4 => AUDIO_FOLDER_PATH.to_owned() + "fastinvader4.wav",
+    });
+    emulator_state.ports = Box::new(ports);
 
     let window = video_subsystem
         .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_HEIGHT * 4)
