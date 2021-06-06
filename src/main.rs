@@ -92,7 +92,7 @@ impl Ports for SpaceInvadersPorts {
                 ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
                     >> (8 - self.shift_amount)) as u8
             }
-            _ => panic!("Can't handle Port {}", port_number),
+            _ => panic!("Can't handle input Port {}", port_number),
         }
     }
 
@@ -134,7 +134,7 @@ impl Ports for SpaceInvadersPorts {
                 self.watchdog = value;
                 debug!("Watchdog: {}", self.watchdog);
             }
-            _ => panic!("Can't handle Port {}", port_number),
+            _ => panic!("Can't handle output Port {}", port_number),
         };
     }
 
