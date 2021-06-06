@@ -57,10 +57,11 @@ enum SoundName {
 struct SpaceInvadersPorts {
     shift_data: u16,
     shift_amount: u8,
-    port_1: u8,
-    port_2: u8,
-    port_3: u8,
-    port_5: u8,
+    in_port_0: u8,
+    in_port_1: u8,
+    in_port_2: u8,
+    out_port_3: u8,
+    out_port_5: u8,
     watchdog: u8,
     sound_map: HashMap<SoundName, Chunk>,
 }
@@ -70,10 +71,11 @@ impl Default for SpaceInvadersPorts {
         SpaceInvadersPorts {
             shift_data: 0b0000_0000_0000_0000,
             shift_amount: 0b0000_0000,
-            port_1: 0b0000_1000,
-            port_2: 0b0000_0000,
-            port_3: 0b0000_0000,
-            port_5: 0b0000_0000,
+            in_port_0: 0b0000_1110,
+            in_port_1: 0b0000_1000,
+            in_port_2: 0b0000_0000,
+            out_port_3: 0b0000_0000,
+            out_port_5: 0b0000_0000,
             watchdog: 0b0000_0000,
             sound_map: HashMap::new(),
         }
@@ -83,8 +85,9 @@ impl Default for SpaceInvadersPorts {
 impl Ports for SpaceInvadersPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
-            1 => self.port_1,
-            2 => self.port_2,
+            0 => self.in_port_0,
+            1 => self.in_port_1,
+            2 => self.in_port_2,
             3 => {
                 ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
                     >> (8 - self.shift_amount)) as u8
@@ -97,7 +100,7 @@ impl Ports for SpaceInvadersPorts {
         match port_number {
             3 => {
                 self.play_sounds_if_needed(
-                    self.port_3,
+                    self.out_port_3,
                     value,
                     hashmap! {
                         0 => &SoundName::UfoFly,
@@ -106,11 +109,11 @@ impl Ports for SpaceInvadersPorts {
                         3 => &SoundName::InvaderKilled,
                     },
                 );
-                self.port_3 = value;
+                self.out_port_3 = value;
             }
             5 => {
                 self.play_sounds_if_needed(
-                    self.port_5,
+                    self.out_port_5,
                     value,
                     hashmap! {
                         0 => &SoundName::InvaderMovement1,
@@ -120,7 +123,7 @@ impl Ports for SpaceInvadersPorts {
                         4 => &SoundName::UfoKilled,
                     },
                 );
-                self.port_5 = value;
+                self.out_port_5 = value;
             }
             2 => self.shift_amount = value & 0b0000_0111,
             4 => {
@@ -137,16 +140,18 @@ impl Ports for SpaceInvadersPorts {
 
     fn get_in_port_static_value(&self, port_number: u8) -> Option<u8> {
         match port_number {
-            1 => Some(self.port_1),
-            2 => Some(self.port_2),
+            0 => Some(self.in_port_0),
+            1 => Some(self.in_port_1),
+            2 => Some(self.in_port_2),
             _ => None,
         }
     }
 
     fn set_in_port_static_value(&mut self, port_number: u8, value: u8) {
         match port_number {
-            1 => self.port_1 = value,
-            2 => self.port_2 = value,
+            0 => self.in_port_0 = value,
+            1 => self.in_port_1 = value,
+            2 => self.in_port_2 = value,
             _ => {}
         }
     }
@@ -268,6 +273,12 @@ fn main() -> Result<(), String> {
             if should_quit {
                 break 'running;
             }
+
+            let mut port_0 = emulator_state.ports.get_in_port_static_value(0).unwrap();
+            bit_operations::set_bit_in_value(&mut port_0, 4, inputs.p1_shoot || inputs.p2_shoot);
+            bit_operations::set_bit_in_value(&mut port_0, 5, inputs.p1_left || inputs.p2_left);
+            bit_operations::set_bit_in_value(&mut port_0, 6, inputs.p1_right || inputs.p2_right);
+            emulator_state.ports.set_in_port_static_value(0, port_0);
 
             let mut port_1 = emulator_state.ports.get_in_port_static_value(1).unwrap();
             bit_operations::set_bit_in_value(&mut port_1, 0, inputs.credit);
