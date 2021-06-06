@@ -335,11 +335,11 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn get_condition_flag_byte(&self) -> u8 {
         let mut condition_flag_byte = 0b00000010;
-        for (condition_flag, bit_index) in CONDITION_FLAG_BITS {
+        for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
             bit_operations::set_bit_in_value(
                 &mut condition_flag_byte,
-                bit_index,
-                self.get_condition_flag_value(condition_flag),
+                *bit_index,
+                self.get_condition_flag_value(*condition_flag),
             );
         }
         condition_flag_byte
@@ -348,10 +348,10 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn set_condition_flag_byte(&mut self, memory_address: u16) {
         let condition_flag_byte = self.get_value_at_memory_location(memory_address);
-        for (condition_flag, bit_index) in CONDITION_FLAG_BITS {
+        for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
             self.set_condition_flag_value(
-                condition_flag,
-                bit_operations::is_bit_set(condition_flag_byte, bit_index),
+                *condition_flag,
+                bit_operations::is_bit_set(condition_flag_byte, *bit_index),
             );
         }
     }
