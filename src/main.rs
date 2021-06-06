@@ -434,40 +434,58 @@ fn handle_events(event_pump: &mut EventPump, inputs: &mut Inputs) -> bool {
                 inputs.p1_start = false;
             }
             Event::KeyDown {
+                keycode: Some(Keycode::Backspace),
+                ..
+            } => {
+                inputs.p2_start = true;
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Backspace),
+                ..
+            } => {
+                inputs.p2_start = false;
+            }
+            Event::KeyDown {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
                 inputs.p1_shoot = true;
+                inputs.p2_shoot = true;
             }
             Event::KeyUp {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
                 inputs.p1_shoot = false;
+                inputs.p2_shoot = false;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Left),
                 ..
             } => {
                 inputs.p1_left = true;
+                inputs.p2_left = true;
             }
             Event::KeyUp {
                 keycode: Some(Keycode::Left),
                 ..
             } => {
                 inputs.p1_left = false;
+                inputs.p2_left = false;
             }
             Event::KeyDown {
                 keycode: Some(Keycode::Right),
                 ..
             } => {
                 inputs.p1_right = true;
+                inputs.p2_right = true;
             }
             Event::KeyUp {
                 keycode: Some(Keycode::Right),
                 ..
             } => {
                 inputs.p1_right = false;
+                inputs.p2_right = false;
             }
             _ => {}
         }
