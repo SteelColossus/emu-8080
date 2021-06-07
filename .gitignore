@@ -3,6 +3,6 @@ Cargo.lock
 **/*.rs.bk
 /.idea
 /.vscode
-invaders.*
+*.bin
 /screens
 /cpu_tests
