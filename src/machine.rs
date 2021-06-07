@@ -8,12 +8,14 @@ use sdl2::mixer;
 use sdl2::mixer::{Channel, Chunk};
 
 pub trait Machine {
+    fn get_state(&self) -> &State;
+    fn get_state_mut(&mut self) -> &mut State;
     fn set_input_from_key(&mut self, key: Keycode, key_down: bool);
     fn set_ports_based_on_inputs(&mut self);
 }
 
 pub struct SpaceInvadersMachine {
-    pub state: State,
+    state: State,
     inputs: SpaceInvadersInputs,
     dip_switches: SpaceInvadersDipSwitches,
 }
@@ -46,6 +48,14 @@ impl Default for SpaceInvadersMachine {
 const AUDIO_FOLDER_PATH: &str = "audio/";
 
 impl Machine for SpaceInvadersMachine {
+    fn get_state(&self) -> &State {
+        &self.state
+    }
+
+    fn get_state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
     fn set_input_from_key(&mut self, key: Keycode, key_down: bool) {
         match key {
             Keycode::RShift => self.inputs.credit = key_down,
@@ -69,48 +79,43 @@ impl Machine for SpaceInvadersMachine {
     }
 
     fn set_ports_based_on_inputs(&mut self) {
-        let mut port_0 = self.state.ports.get_in_port_static_value(0).unwrap();
-        bit_operations::set_bit_in_value(
-            &mut port_0,
-            4,
-            self.inputs.p1_shoot || self.inputs.p2_shoot,
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            0,
+            hashmap! {
+                4 => self.inputs.p1_shoot || self.inputs.p2_shoot,
+                5 => self.inputs.p1_left || self.inputs.p2_left,
+                6 => self.inputs.p1_right || self.inputs.p2_right,
+            },
         );
-        bit_operations::set_bit_in_value(
-            &mut port_0,
-            5,
-            self.inputs.p1_left || self.inputs.p2_left,
-        );
-        bit_operations::set_bit_in_value(
-            &mut port_0,
-            6,
-            self.inputs.p1_right || self.inputs.p2_right,
-        );
-        self.state.ports.set_in_port_static_value(0, port_0);
 
-        let mut port_1 = self.state.ports.get_in_port_static_value(1).unwrap();
-        bit_operations::set_bit_in_value(&mut port_1, 0, self.inputs.credit);
-        bit_operations::set_bit_in_value(&mut port_1, 1, self.inputs.p2_start);
-        bit_operations::set_bit_in_value(&mut port_1, 2, self.inputs.p1_start);
-        bit_operations::set_bit_in_value(&mut port_1, 4, self.inputs.p1_shoot);
-        bit_operations::set_bit_in_value(&mut port_1, 5, self.inputs.p1_left);
-        bit_operations::set_bit_in_value(&mut port_1, 6, self.inputs.p1_right);
-        self.state.ports.set_in_port_static_value(1, port_1);
-
-        let mut port_2 = self.state.ports.get_in_port_static_value(2).unwrap();
-        bit_operations::set_bit_in_value(&mut port_2, 2, self.inputs.tilt);
-        bit_operations::set_bit_in_value(&mut port_2, 4, self.inputs.p2_shoot);
-        bit_operations::set_bit_in_value(&mut port_2, 5, self.inputs.p2_left);
-        bit_operations::set_bit_in_value(&mut port_2, 6, self.inputs.p2_right);
-
-        bit_operations::set_bit_in_value(&mut port_2, 0, self.dip_switches.num_ships_low);
-        bit_operations::set_bit_in_value(&mut port_2, 1, self.dip_switches.num_ships_high);
-        bit_operations::set_bit_in_value(
-            &mut port_2,
-            3,
-            self.dip_switches.extra_ship_at_lower_score,
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            1,
+            hashmap! {
+                0 => self.inputs.credit,
+                1 => self.inputs.p2_start,
+                2 => self.inputs.p1_start,
+                4 => self.inputs.p1_shoot,
+                5 => self.inputs.p1_left,
+                6 => self.inputs.p1_right,
+            },
         );
-        bit_operations::set_bit_in_value(&mut port_2, 7, self.dip_switches.coin_info_off);
-        self.state.ports.set_in_port_static_value(2, port_2);
+
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            2,
+            hashmap! {
+                2 => self.inputs.tilt,
+                4 => self.inputs.p2_shoot,
+                5 => self.inputs.p2_left,
+                6 => self.inputs.p2_right,
+                0 => self.dip_switches.num_ships_low,
+                1 => self.dip_switches.num_ships_high,
+                3 => self.dip_switches.extra_ship_at_lower_score,
+                7 => self.dip_switches.coin_info_off,
+            },
+        );
     }
 }
 
@@ -155,17 +160,33 @@ impl Default for SpaceInvadersPorts {
     }
 }
 
+fn get_shifted_value(shift_data: u16, shift_amount: u8) -> u8 {
+    ((shift_data & (0b_1111_1111_0000_0000 >> shift_amount as u16)) >> (8 - shift_amount)) as u8
+}
+
+fn shift_new_value_into_data(shift_data: u16, value: u8) -> u16 {
+    let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(shift_data);
+    bit_operations::concat_low_high_bytes(high_shift_data, value)
+}
+
+fn set_in_port_from_flags(
+    ports: &mut Box<dyn Ports>,
+    port_number: u8,
+    bit_index_to_flag_map: HashMap<u8, bool>,
+) {
+    let mut port = ports.get_in_port_static_value(port_number).unwrap();
+    for (bit_index, flag) in bit_index_to_flag_map {
+        bit_operations::set_bit_in_value(&mut port, bit_index, flag);
+    }
+    ports.set_in_port_static_value(port_number, port);
+}
+
 impl Ports for SpaceInvadersPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
-            0 => self.in_port_0,
-            1 => self.in_port_1,
-            2 => self.in_port_2,
-            3 => {
-                ((self.shift_data & (0b_1111_1111_0000_0000 >> self.shift_amount as u16))
-                    >> (8 - self.shift_amount)) as u8
-            }
-            _ => panic!("Can't handle input Port {}", port_number),
+            0 | 1 | 2 => self.get_in_port_static_value(port_number).unwrap(),
+            3 => get_shifted_value(self.shift_data, self.shift_amount),
+            _ => panic!("Invalid input Port {}", port_number),
         }
     }
 
@@ -199,15 +220,12 @@ impl Ports for SpaceInvadersPorts {
                 self.out_port_5 = value;
             }
             2 => self.shift_amount = value & 0b0000_0111,
-            4 => {
-                let (_, high_shift_data) = bit_operations::split_to_low_high_bytes(self.shift_data);
-                self.shift_data = bit_operations::concat_low_high_bytes(high_shift_data, value);
-            }
+            4 => self.shift_data = shift_new_value_into_data(self.shift_data, value),
             6 => {
                 self.watchdog = value;
                 debug!("Watchdog: {}", self.watchdog);
             }
-            _ => panic!("Can't handle output Port {}", port_number),
+            _ => panic!("Invalid output Port {}", port_number),
         };
     }
 
@@ -288,3 +306,185 @@ struct SpaceInvadersDipSwitches {
     pub extra_ship_at_lower_score: bool,
     pub coin_info_off: bool,
 }
+
+pub struct BootHillMachine {
+    state: State,
+    inputs: BootHillInputs,
+    dip_switches: BootHillDipSwitches,
+}
+
+impl Default for BootHillMachine {
+    fn default() -> Self {
+        BootHillMachine {
+            state: {
+                let mut state = State::default();
+                state.ports = Box::new(BootHillPorts::default());
+                state
+            },
+            inputs: BootHillInputs::default(),
+            dip_switches: BootHillDipSwitches::default(),
+        }
+    }
+}
+
+impl Machine for BootHillMachine {
+    fn get_state(&self) -> &State {
+        &self.state
+    }
+
+    fn get_state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
+    fn set_input_from_key(&mut self, key: Keycode, key_down: bool) {
+        match key {
+            Keycode::RShift => self.inputs.credit = key_down,
+            Keycode::Return => self.inputs.p1_start = key_down,
+            Keycode::Backspace => self.inputs.p2_start = key_down,
+            Keycode::Up => self.inputs.p1_up = key_down,
+            Keycode::Down => self.inputs.p1_down = key_down,
+            Keycode::Left => self.inputs.p1_left = key_down,
+            Keycode::Right => self.inputs.p1_right = key_down,
+            Keycode::Space => self.inputs.p1_shoot = key_down,
+            Keycode::W => self.inputs.p2_up = key_down,
+            Keycode::S => self.inputs.p2_down = key_down,
+            Keycode::A => self.inputs.p2_left = key_down,
+            Keycode::D => self.inputs.p2_right = key_down,
+            Keycode::Tab => self.inputs.p2_shoot = key_down,
+            _ => {}
+        };
+    }
+
+    fn set_ports_based_on_inputs(&mut self) {
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            0,
+            hashmap! {
+                0 => self.inputs.p2_up,
+                1 => self.inputs.p2_down,
+                2 => self.inputs.p2_left,
+                3 => self.inputs.p2_right,
+                7 => self.inputs.p2_shoot,
+            },
+        );
+
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            1,
+            hashmap! {
+                0 => self.inputs.p1_up,
+                1 => self.inputs.p1_down,
+                2 => self.inputs.p1_left,
+                3 => self.inputs.p1_right,
+                7 => self.inputs.p1_shoot,
+            },
+        );
+
+        set_in_port_from_flags(
+            &mut self.state.ports,
+            2,
+            hashmap! {
+                5 => self.inputs.p1_start,
+                6 => self.inputs.credit,
+                7 => self.inputs.p2_start,
+            },
+        );
+    }
+}
+
+struct BootHillPorts {
+    shift_data: u16,
+    shift_amount: u8,
+    shift_reverse: bool,
+    in_port_0: u8,
+    in_port_1: u8,
+    in_port_2: u8,
+    watchdog: u8,
+}
+
+impl Default for BootHillPorts {
+    fn default() -> Self {
+        BootHillPorts {
+            shift_data: 0b0000_0000_0000_0000,
+            shift_amount: 0b0000_0000,
+            shift_reverse: false,
+            in_port_0: 0b0000_0000,
+            in_port_1: 0b0000_0000,
+            in_port_2: 0b0000_0000,
+            watchdog: 0b0000_0000,
+        }
+    }
+}
+
+impl Ports for BootHillPorts {
+    fn read_in_port(&self, port_number: u8) -> u8 {
+        match port_number {
+            0 | 1 | 2 => self.get_in_port_static_value(port_number).unwrap(),
+            3 => {
+                let shifted_value = get_shifted_value(self.shift_data, self.shift_amount);
+                if self.shift_reverse {
+                    bit_operations::reverse_byte(shifted_value)
+                } else {
+                    shifted_value
+                }
+            }
+            _ => panic!("Invalid input Port {}", port_number),
+        }
+    }
+
+    fn write_out_port(&mut self, port_number: u8, value: u8) {
+        match port_number {
+            3 | 5 | 6 => {
+                // Sound
+            }
+            1 => {
+                self.shift_amount = value & 0b0000_0111;
+                self.shift_reverse = value & 0b0000_1000 == 0b0000_1000;
+            }
+            2 => self.shift_data = shift_new_value_into_data(self.shift_data, value),
+            4 => {
+                self.watchdog = value;
+                debug!("Watchdog: {}", self.watchdog);
+            }
+            _ => panic!("Invalid output Port {}", port_number),
+        }
+    }
+
+    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8> {
+        match port_number {
+            0 => Some(self.in_port_0),
+            1 => Some(self.in_port_1),
+            2 => Some(self.in_port_2),
+            _ => None,
+        }
+    }
+
+    fn set_in_port_static_value(&mut self, port_number: u8, value: u8) {
+        match port_number {
+            0 => self.in_port_0 = value,
+            1 => self.in_port_1 = value,
+            2 => self.in_port_2 = value,
+            _ => {}
+        }
+    }
+}
+
+#[derive(Default)]
+struct BootHillInputs {
+    credit: bool,
+    p1_start: bool,
+    p1_up: bool,
+    p1_down: bool,
+    p1_left: bool,
+    p1_right: bool,
+    p1_shoot: bool,
+    p2_start: bool,
+    p2_up: bool,
+    p2_down: bool,
+    p2_left: bool,
+    p2_right: bool,
+    p2_shoot: bool,
+}
+
+#[derive(Default)]
+struct BootHillDipSwitches {}

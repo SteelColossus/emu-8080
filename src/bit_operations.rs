@@ -57,6 +57,21 @@ pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool)
     result & 0b0001_0000 == 0b0001_0000
 }
 
+#[cfg_attr(test, mutate)]
+pub fn reverse_byte(value: u8) -> u8 {
+    let mut reverse_bit_mask = 0b1000_0000;
+    let mut reverse_byte = 0;
+
+    for bit_index in 0..=7 {
+        if is_bit_set(value, bit_index) {
+            reverse_byte += reverse_bit_mask;
+        }
+        reverse_bit_mask >>= 1;
+    }
+
+    reverse_byte
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

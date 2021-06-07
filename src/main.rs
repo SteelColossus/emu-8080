@@ -5,8 +5,8 @@ mod machine;
 use std::fs;
 use std::time::{Duration, Instant};
 
-use crate::machine::{Machine, SpaceInvadersMachine};
-use emu_8080::{runner, State, Operation};
+use crate::machine::{BootHillMachine, Machine, SpaceInvadersMachine};
+use emu_8080::{runner, State};
 use log::debug;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -24,15 +24,20 @@ const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PI
 fn main() -> Result<(), String> {
     env_logger::init();
 
-    let file_bytes = fs::read("invaders.bin").unwrap();
+    let file_name = "boothill.bin";
+    let file_bytes = fs::read(file_name).unwrap();
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     // Based on audio file bitrate of 88kbps
     mixer::open_audio(11_025, mixer::AUDIO_U8, 1, 1_024)?;
 
-    let mut machine = SpaceInvadersMachine::default();
-    machine.state.load_memory(file_bytes);
+    let mut machine: Box<dyn Machine> = match file_name {
+        "invaders.bin" => Box::new(SpaceInvadersMachine::default()),
+        "boothill.bin" => Box::new(BootHillMachine::default()),
+        _ => panic!("Can't play game with filename {}", file_name),
+    };
+    machine.get_state_mut().load_memory(file_bytes);
 
     let window = video_subsystem
         .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_HEIGHT * 4)
@@ -58,19 +63,19 @@ fn main() -> Result<(), String> {
     let mut current_screen_line: u32 = 0;
 
     'running: loop {
-        runner::run_next_operation(&mut machine.state);
+        runner::run_next_operation(&mut machine.get_state_mut());
 
         let duration = timer.elapsed();
 
         if duration > Duration::from_micros(1_000_000 / FRAME_RATE / SCREEN_HEIGHT as u64) {
             timer = Instant::now();
             current_screen_line += 1;
-            generate_video_interrupts_if_needed(&mut machine.state, current_screen_line);
+            generate_video_interrupts_if_needed(&mut machine.get_state_mut(), current_screen_line);
         }
 
         if current_screen_line >= SCREEN_HEIGHT {
             current_screen_line = 0;
-            let screen_pixel_data = get_screen_pixel_data(&machine.state);
+            let screen_pixel_data = get_screen_pixel_data(&machine.get_state());
             texture
                 .update(
                     None,
@@ -181,7 +186,7 @@ fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(),
     Ok(())
 }
 
-fn handle_events(event_pump: &mut EventPump, machine: &mut dyn Machine) -> bool {
+fn handle_events(event_pump: &mut EventPump, machine: &mut Box<dyn Machine>) -> bool {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
