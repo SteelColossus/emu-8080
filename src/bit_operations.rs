@@ -47,14 +47,17 @@ pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool) -> bool {
-    let lower_value_1 = value_1 & 0b0000_1111;
-    let lower_value_2 = value_2 & 0b0000_1111;
-    let result = if is_subtraction {
-        lower_value_1.wrapping_sub(lower_value_2)
-    } else {
-        lower_value_1.wrapping_add(lower_value_2)
-    };
-    result & 0b0001_0000 == 0b0001_0000
+    let nibble_mask = 0b0000_1111;
+    let lower_value_1 = value_1 & nibble_mask;
+    // Auxiliary carry on 8080 is implemented via unsigned addition
+    let lower_value_2 = if is_subtraction { unsigned_sign_invert(value_2) } else { value_2 } & nibble_mask;
+    let result = lower_value_1.wrapping_add(lower_value_2);
+    is_bit_set(result, 4)
+}
+
+#[cfg_attr(test, mutate)]
+pub fn unsigned_sign_invert(value: u8) -> u8 {
+    (!value).wrapping_add(1)
 }
 
 #[cfg_attr(test, mutate)]
