@@ -204,6 +204,7 @@ pub struct State {
     memory: [u8; MEMORY_SIZE],
     pub are_interrupts_enabled: bool,
     pub ports: Box<dyn Ports>,
+    cpu_total_state_count: usize,
 }
 
 impl Default for State {
@@ -357,6 +358,16 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
+    pub fn is_condition_true(&self, condition: Condition) -> bool {
+        self.get_condition_flag_value(condition.0) == condition.1
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn get_cpu_total_state_count(&self) -> usize {
+        self.cpu_total_state_count
+    }
+
+    #[cfg_attr(test, mutate)]
     pub fn run_operation(&mut self, operation: Operation) {
         let op_code_pc = self.program_counter;
         self.program_counter += 1;
@@ -378,7 +389,8 @@ impl State {
         }
 
         debug!(
-            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}\t({:02X} {:02X} {:02X} {:02X})",
+            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}   \
+            ({:02X} {:02X} {:02X} {:02X})",
             op_code_pc,
             bit_operations::concat_low_high_bytes(
                 self.get_condition_flag_byte(),
@@ -388,7 +400,7 @@ impl State {
             RegisterPair::DE.get_full_value(self),
             RegisterPair::HL.get_full_value(self),
             self.stack_pointer,
-            0, // No cycle tracking as of yet
+            self.cpu_total_state_count,
             self.get_value_at_memory_location(op_code_pc),
             self.get_value_at_memory_location(op_code_pc + 1),
             self.get_value_at_memory_location(op_code_pc + 2),
@@ -396,6 +408,7 @@ impl State {
         );
 
         runner::run_operation(&operation, self, additional_byte_1, additional_byte_2);
+        self.cpu_total_state_count += operation.machine_states(&self) as usize;
     }
 }
 
@@ -494,6 +507,7 @@ impl StateBuilder {
             memory,
             are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
             ports: Box::new(DefaultPorts),
+            cpu_total_state_count: 0,
         }
     }
 }
@@ -607,6 +621,126 @@ impl Operation {
             Operation::In => InstructionDataType::Single,
             Operation::Out => InstructionDataType::Single,
             _ => InstructionDataType::None,
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn machine_cycles(&self, state: &State) -> u8 {
+        match self {
+            Operation::Mov(_, _) => 1,
+            Operation::MovFromMem(_) | Operation::MovToMem(_) => 2,
+            Operation::Mvi(_) => 2,
+            Operation::MviMem => 3,
+            Operation::Lxi(_) => 3,
+            Operation::Lda | Operation::Sta => 4,
+            Operation::Lhld | Operation::Shld => 5,
+            Operation::Ldax(_) | Operation::Stax(_) => 2,
+            Operation::Xchg => 1,
+            Operation::Add(_) | Operation::Adc(_) | Operation::Sub(_) | Operation::Sbb(_) => 1,
+            Operation::AddMem | Operation::AdcMem | Operation::SubMem | Operation::SbbMem => 2,
+            Operation::Adi | Operation::Aci | Operation::Sui | Operation::Sbi => 2,
+            Operation::Inr(_) | Operation::Dcr(_) => 1,
+            Operation::InrMem | Operation::DcrMem => 2,
+            Operation::Inx(_) | Operation::Dcx(_) => 1,
+            Operation::Dad(_) => 3,
+            Operation::Daa => 1,
+            Operation::Ana(_) | Operation::Xra(_) | Operation::Ora(_) => 1,
+            Operation::AnaMem | Operation::XraMem | Operation::OraMem => 2,
+            Operation::Ani | Operation::Xri | Operation::Ori => 2,
+            Operation::Cmp(_) => 1,
+            Operation::CmpMem => 2,
+            Operation::Cpi => 2,
+            Operation::Rlc | Operation::Ral | Operation::Rrc | Operation::Rar => 1,
+            Operation::Cma | Operation::Cmc => 1,
+            Operation::Stc => 1,
+            Operation::Jmp | Operation::Jcond(_) => 3,
+            Operation::Call => 5,
+            Operation::Ccond(condition) => {
+                if state.is_condition_true(*condition) {
+                    5
+                } else {
+                    3
+                }
+            }
+            Operation::Ret => 3,
+            Operation::Rcond(condition) => {
+                if state.is_condition_true(*condition) {
+                    3
+                } else {
+                    1
+                }
+            }
+            Operation::Rst(_) => 3,
+            Operation::Pchl => 1,
+            Operation::Push(_) | Operation::PushPsw => 3,
+            Operation::Pop(_) | Operation::PopPsw => 3,
+            Operation::Xthl => 5,
+            Operation::Sphl => 1,
+            Operation::In | Operation::Out => 3,
+            Operation::Ei | Operation::Di => 1,
+            Operation::Hlt => 1,
+            Operation::Nop => 1,
+        }
+    }
+
+    // This confusing terminology comes from the 8080 manual:
+    // a state really refers to the smallest unit of processing activity.
+    #[cfg_attr(test, mutate)]
+    pub fn machine_states(&self, state: &State) -> u8 {
+        match self {
+            Operation::Mov(_, _) => 5,
+            Operation::MovFromMem(_) | Operation::MovToMem(_) => 7,
+            Operation::Mvi(_) => 7,
+            Operation::MviMem => 10,
+            Operation::Lxi(_) => 10,
+            Operation::Lda | Operation::Sta => 13,
+            Operation::Lhld | Operation::Shld => 16,
+            Operation::Ldax(_) | Operation::Stax(_) => 7,
+            Operation::Xchg => 4,
+            Operation::Add(_) | Operation::Adc(_) | Operation::Sub(_) | Operation::Sbb(_) => 4,
+            Operation::AddMem | Operation::AdcMem | Operation::SubMem | Operation::SbbMem => 7,
+            Operation::Adi | Operation::Aci | Operation::Sui | Operation::Sbi => 7,
+            Operation::Inr(_) | Operation::Dcr(_) => 5,
+            Operation::InrMem | Operation::DcrMem => 10,
+            Operation::Inx(_) | Operation::Dcx(_) => 5,
+            Operation::Dad(_) => 10,
+            Operation::Daa => 4,
+            Operation::Ana(_) | Operation::Xra(_) | Operation::Ora(_) => 4,
+            Operation::AnaMem | Operation::XraMem | Operation::OraMem => 7,
+            Operation::Ani | Operation::Xri | Operation::Ori => 7,
+            Operation::Cmp(_) => 4,
+            Operation::CmpMem => 7,
+            Operation::Cpi => 7,
+            Operation::Rlc | Operation::Ral | Operation::Rrc | Operation::Rar => 4,
+            Operation::Cma | Operation::Cmc => 4,
+            Operation::Stc => 4,
+            Operation::Jmp | Operation::Jcond(_) => 10,
+            Operation::Call => 17,
+            Operation::Ccond(condition) => {
+                if state.is_condition_true(*condition) {
+                    17
+                } else {
+                    11
+                }
+            }
+            Operation::Ret => 10,
+            Operation::Rcond(condition) => {
+                if state.is_condition_true(*condition) {
+                    11
+                } else {
+                    5
+                }
+            }
+            Operation::Rst(_) => 11,
+            Operation::Pchl => 5,
+            Operation::Push(_) | Operation::PushPsw => 11,
+            Operation::Pop(_) | Operation::PopPsw => 10,
+            Operation::Xthl => 18,
+            Operation::Sphl => 5,
+            Operation::In | Operation::Out => 10,
+            Operation::Ei | Operation::Di => 4,
+            Operation::Hlt => 7,
+            Operation::Nop => 4,
         }
     }
 }

@@ -50,7 +50,11 @@ pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool)
     let nibble_mask = 0b0000_1111;
     let lower_value_1 = value_1 & nibble_mask;
     // Auxiliary carry on 8080 is implemented via unsigned addition
-    let lower_value_2 = if is_subtraction { unsigned_sign_invert(value_2) } else { value_2 } & nibble_mask;
+    let lower_value_2 = if is_subtraction {
+        unsigned_sign_invert(value_2)
+    } else {
+        value_2
+    } & nibble_mask;
     let result = lower_value_1.wrapping_add(lower_value_2);
     is_bit_set(result, 4)
 }

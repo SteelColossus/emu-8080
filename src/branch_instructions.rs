@@ -11,7 +11,7 @@ fn is_condition_true(state: &State, condition: Condition, base_instruction: &str
         );
     }
 
-    state.get_condition_flag_value(condition.0) == condition.1
+    state.is_condition_true(condition)
 }
 
 #[cfg_attr(test, mutate)]

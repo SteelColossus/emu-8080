@@ -69,7 +69,19 @@ fn read_test_file(test_path: &str) -> State {
 }
 
 fn init() {
-    let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder()
+        .target(env_logger::Target::Stdout)
+        .is_test(true)
+        .try_init();
+}
+
+fn assert_cpu_cycles_are_as_expected(state: &State, expected_cpu_cycles: usize) {
+    let actual_cpu_cycles = state.get_cpu_total_state_count();
+    assert_eq!(
+        actual_cpu_cycles, expected_cpu_cycles,
+        "Expected test to take {} cycles, but it actually took {} cycles",
+        expected_cpu_cycles, actual_cpu_cycles
+    );
 }
 
 #[test]
@@ -83,10 +95,13 @@ fn cpu_test_tst8080() {
             break 'running;
         }
     }
+
+    assert_cpu_cycles_are_as_expected(&state, 4924);
 }
 
 #[test]
 fn cpu_test_cputest() {
+    init();
     let mut state = read_test_file("cpu_tests/CPUTEST.COM");
 
     'running: loop {
@@ -95,10 +110,13 @@ fn cpu_test_cputest() {
             break 'running;
         }
     }
+
+    assert_cpu_cycles_are_as_expected(&state, 255653383);
 }
 
 #[test]
 fn cpu_test_8080pre() {
+    init();
     let mut state = read_test_file("cpu_tests/8080PRE.COM");
 
     'running: loop {
@@ -107,10 +125,13 @@ fn cpu_test_8080pre() {
             break 'running;
         }
     }
+
+    assert_cpu_cycles_are_as_expected(&state, 7817);
 }
 
 #[test]
 fn cpu_test_8080exm() {
+    init();
     let mut state = read_test_file("cpu_tests/8080EXM.COM");
 
     'running: loop {
@@ -119,4 +140,6 @@ fn cpu_test_8080exm() {
             break 'running;
         }
     }
+
+    assert_cpu_cycles_are_as_expected(&state, 23803381171);
 }
