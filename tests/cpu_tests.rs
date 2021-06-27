@@ -1,5 +1,6 @@
 use emu_8080::{disassembler, Operation, Register, RegisterPair, State, StateBuilder};
 use std::fs;
+use std::io::Write;
 
 fn run_next_operation(state: &mut State) -> bool {
     let memory_value = state.get_memory_value_at_program_counter();
@@ -72,6 +73,7 @@ fn init() {
     let _ = env_logger::builder()
         .target(env_logger::Target::Stdout)
         .is_test(true)
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
         .try_init();
 }
 

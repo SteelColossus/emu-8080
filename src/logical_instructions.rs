@@ -12,18 +12,21 @@ pub fn ana_instruction(state: &mut State, source_register: Register) {
 pub fn ana_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
     let memory_value = state.get_value_at_memory_location(memory_address);
-    ani_instruction(state, memory_value)
+    ani_instruction(state, memory_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ani_instruction(state: &mut State, data: u8) {
+    let accumulator_value = state.get_register_value(Register::A);
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value & target_value
     });
     state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = false;
-    // TODO: This is not technically correct at the moment, since this function is shared with the other AND operations
-    state.condition_flags.auxiliary_carry = false;
+    // This behaviour is described in the '8080/8085 Assembly Language Programming Manual'.
+    // The regular manual says that ANI clears the carry flag, however the programming manual does not,
+    // so assume the latter as it makes more sense.
+    state.condition_flags.auxiliary_carry = bit_operations::is_bit_set(accumulator_value | data, 3);
 }
 
 #[cfg_attr(test, mutate)]
@@ -36,7 +39,7 @@ pub fn xra_instruction(state: &mut State, source_register: Register) {
 pub fn xra_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
     let memory_value = state.get_value_at_memory_location(memory_address);
-    xri_instruction(state, memory_value)
+    xri_instruction(state, memory_value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -59,7 +62,7 @@ pub fn ora_instruction(state: &mut State, source_register: Register) {
 pub fn ora_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
     let memory_value = state.get_value_at_memory_location(memory_address);
-    ori_instruction(state, memory_value)
+    ori_instruction(state, memory_value);
 }
 
 #[cfg_attr(test, mutate)]
@@ -88,9 +91,9 @@ pub fn cmp_mem_instruction(state: &mut State) {
 #[cfg_attr(test, mutate)]
 pub fn cpi_instruction(state: &mut State, data: u8) {
     let accumulator_value = state.get_register_value(Register::A);
-    let result = accumulator_value.wrapping_sub(data);
+    let (result, borrow) = accumulator_value.overflowing_sub(data);
     state.set_condition_flags_from_result(result);
-    state.condition_flags.carry = accumulator_value < data;
+    state.condition_flags.carry = borrow;
     state.condition_flags.auxiliary_carry =
         bit_operations::calculate_auxiliary_carry(accumulator_value, data, true);
 }

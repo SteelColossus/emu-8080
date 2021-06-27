@@ -389,7 +389,7 @@ impl State {
         }
 
         debug!(
-            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}   \
+            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}\t\
             ({:02X} {:02X} {:02X} {:02X})",
             op_code_pc,
             bit_operations::concat_low_high_bytes(
