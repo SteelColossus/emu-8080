@@ -1,6 +1,7 @@
 use emu_8080::{disassembler, Operation, Register, RegisterPair, State, StateBuilder};
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 
 fn run_next_operation(state: &mut State) -> bool {
     let memory_value = state.get_memory_value_at_program_counter();
@@ -47,8 +48,9 @@ fn print_test_output(state: &State) {
     };
 }
 
-fn read_test_file(test_path: &str) -> State {
+fn read_test_file(test_filename: &str) -> State {
     let pc_start = 0x0100;
+    let test_path: PathBuf = ["cpu_tests", test_filename].iter().collect();
     let mut file_bytes = fs::read(test_path).expect("File not found!");
 
     for memory_index in (0..pc_start).rev() {
@@ -86,10 +88,9 @@ fn assert_cpu_cycles_are_as_expected(state: &State, expected_cpu_cycles: usize) 
     );
 }
 
-#[test]
-fn cpu_test_tst8080() {
+fn run_cpu_test(test_filename: &str, expected_cpu_cycles: usize) {
     init();
-    let mut state = read_test_file("cpu_tests/TST8080.COM");
+    let mut state = read_test_file(test_filename);
 
     'running: loop {
         let should_quit = run_next_operation(&mut state);
@@ -98,50 +99,25 @@ fn cpu_test_tst8080() {
         }
     }
 
-    assert_cpu_cycles_are_as_expected(&state, 4924);
+    assert_cpu_cycles_are_as_expected(&state, expected_cpu_cycles);
+}
+
+#[test]
+fn cpu_test_tst8080() {
+    run_cpu_test("TST8080.COM", 4924);
 }
 
 #[test]
 fn cpu_test_cputest() {
-    init();
-    let mut state = read_test_file("cpu_tests/CPUTEST.COM");
-
-    'running: loop {
-        let should_quit = run_next_operation(&mut state);
-        if should_quit {
-            break 'running;
-        }
-    }
-
-    assert_cpu_cycles_are_as_expected(&state, 255653383);
+    run_cpu_test("CPUTEST.COM", 255653383);
 }
 
 #[test]
 fn cpu_test_8080pre() {
-    init();
-    let mut state = read_test_file("cpu_tests/8080PRE.COM");
-
-    'running: loop {
-        let should_quit = run_next_operation(&mut state);
-        if should_quit {
-            break 'running;
-        }
-    }
-
-    assert_cpu_cycles_are_as_expected(&state, 7817);
+    run_cpu_test("8080PRE.COM", 7817);
 }
 
 #[test]
 fn cpu_test_8080exm() {
-    init();
-    let mut state = read_test_file("cpu_tests/8080EXM.COM");
-
-    'running: loop {
-        let should_quit = run_next_operation(&mut state);
-        if should_quit {
-            break 'running;
-        }
-    }
-
-    assert_cpu_cycles_are_as_expected(&state, 23803381171);
+    run_cpu_test("8080EXM.COM", 23803381171);
 }
