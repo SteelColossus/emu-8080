@@ -569,6 +569,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::D => 24, Register::A => 103 })
+                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -585,6 +586,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::B => 42, Register::A => 1 })
+                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -611,7 +613,6 @@ mod tests {
                     Register::D => 15,
                     Register::A => 88,
                 })
-                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -626,9 +627,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 0 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -643,9 +646,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::E => 182, Register::A => 161 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -668,6 +673,7 @@ mod tests {
                     ConditionFlag::Sign => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
                 })
                 .build(),
         );
@@ -683,7 +689,6 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 11 })
-                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         );
     }
@@ -697,9 +702,11 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -714,9 +721,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 161 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -731,7 +740,6 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 11, Register::B => 77 })
-                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -747,7 +755,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 10, Register::B => 77 })
-                .condition_flag_values(hashmap! { ConditionFlag::Parity => true, ConditionFlag::AuxiliaryCarry => true })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
                 .build(),
         )
     }
@@ -763,7 +771,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 88, Register::B => 195 })
-                .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
+                .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -783,7 +791,6 @@ mod tests {
                     ConditionFlag::Sign => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
-                    ConditionFlag::AuxiliaryCarry => true,
                 })
                 .build(),
         )
@@ -804,7 +811,7 @@ mod tests {
                     hashmap! { Register::A => 127, Register::H => 12, Register::L => 109 },
                 )
                 .memory_values(hashmap! { 0x0C6D => 177 })
-                .condition_flag_values(hashmap! { ConditionFlag::Carry => true, ConditionFlag::AuxiliaryCarry => true })
+                .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
                 .build(),
         )
     }
@@ -819,7 +826,6 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 11 })
-                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         )
     }
@@ -835,7 +841,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 10 })
-                .condition_flag_values(hashmap! { ConditionFlag::Parity => true, ConditionFlag::AuxiliaryCarry => true })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
                 .build(),
         )
     }
@@ -851,9 +857,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 128 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Carry => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         )
     }
@@ -873,7 +881,6 @@ mod tests {
                     ConditionFlag::Sign => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
-                    ConditionFlag::AuxiliaryCarry => true,
                 })
                 .build(),
         )
@@ -970,11 +977,9 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::C => 255 })
-                .condition_flag_values(hashmap! {
-                    ConditionFlag::Sign => true,
-                    ConditionFlag::Parity => true,
-                    ConditionFlag::AuxiliaryCarry => true,
-                })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
                 .build(),
         );
     }
@@ -989,7 +994,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::E => 126 })
-                .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true, ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         );
     }
@@ -1006,9 +1011,11 @@ mod tests {
             &StateBuilder::default()
                 .register_values(hashmap! { Register::H => 191, Register::L => 154 })
                 .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 232, 0xBF9B => 83 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Sign => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -1025,11 +1032,9 @@ mod tests {
             &StateBuilder::default()
                 .register_values(hashmap! { Register::H => 56, Register::L => 206 })
                 .memory_values(hashmap! { 0x38CE => 255 })
-                .condition_flag_values(hashmap! {
-                    ConditionFlag::Sign => true,
-                    ConditionFlag::Parity => true,
-                    ConditionFlag::AuxiliaryCarry => true,
-                })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Sign => true, ConditionFlag::Parity => true },
+                )
                 .build(),
         );
     }

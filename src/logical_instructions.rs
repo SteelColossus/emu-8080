@@ -224,6 +224,7 @@ mod tests {
                     hashmap! { Register::A => 0b01010001, Register::H => 148, Register::L => 77 },
                 )
                 .memory_values(hashmap! { 0x944D => 0b11011011 })
+                .condition_flag_values(hashmap! { ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         );
     }
@@ -491,9 +492,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 36, Register::H => 36 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -512,7 +515,23 @@ mod tests {
                     ConditionFlag::Sign => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
+                    ConditionFlag::AuxiliaryCarry => true,
                 })
+                .build(),
+        );
+    }
+
+    #[test]
+    fn cmp_sets_the_auxiliary_carry_flag_when_comparing_against_zero() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 24 })
+            .build();
+        cmp_instruction(&mut state, Register::B);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 24 })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true, ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         );
     }
@@ -531,9 +550,11 @@ mod tests {
                     hashmap! { Register::A => 99, Register::H => 163, Register::L => 57 },
                 )
                 .memory_values(hashmap! { 0xA339 => 99 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -552,11 +573,9 @@ mod tests {
                     hashmap! { Register::A => 51, Register::H => 120, Register::L => 113 },
                 )
                 .memory_values(hashmap! { 0x7871 => 253 })
-                .condition_flag_values(hashmap! {
-                    ConditionFlag::Parity => true,
-                    ConditionFlag::Carry => true,
-                    ConditionFlag::AuxiliaryCarry => true,
-                })
+                .condition_flag_values(
+                    hashmap! { ConditionFlag::Parity => true, ConditionFlag::Carry => true },
+                )
                 .build(),
         );
     }
@@ -571,9 +590,11 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 54 })
-                .condition_flag_values(
-                    hashmap! { ConditionFlag::Zero => true, ConditionFlag::Parity => true },
-                )
+                .condition_flag_values(hashmap! {
+                    ConditionFlag::Zero => true,
+                    ConditionFlag::Parity => true,
+                    ConditionFlag::AuxiliaryCarry => true,
+                })
                 .build(),
         );
     }
@@ -592,7 +613,6 @@ mod tests {
                     ConditionFlag::Sign => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
-                    ConditionFlag::AuxiliaryCarry => true,
                 })
                 .build(),
         );
