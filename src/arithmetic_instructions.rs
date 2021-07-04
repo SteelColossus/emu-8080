@@ -89,7 +89,9 @@ pub fn sbi_instruction(state: &mut State, data: u8) {
         state.decrease_register(Register::A, carry_value);
     state.set_condition_flags_from_register_value(Register::A);
     state.condition_flags.carry = main_borrow | borrow_from_borrow;
-    state.condition_flags.auxiliary_carry = main_auxiliary_borrow | auxiliary_borrow_from_borrow;
+    // This was found through trial and error so may be incorrect, but in a way makes sense -
+    // instead of an 'or' we use an 'and', to account for the auxiliary carry being the opposite of what it should be.
+    state.condition_flags.auxiliary_carry = main_auxiliary_borrow & auxiliary_borrow_from_borrow;
 }
 
 #[cfg_attr(test, mutate)]
@@ -161,17 +163,20 @@ pub fn daa_instruction(state: &mut State) {
     if lower_nibble > 9 || state.condition_flags.auxiliary_carry {
         const LOWER_ADDITION: u8 = 6;
         let (result_from_op, carry_from_op) = result.overflowing_add(LOWER_ADDITION);
-        carry |= carry_from_op;
+        carry = carry_from_op;
         auxiliary_carry |= bit_operations::calculate_auxiliary_carry(result, LOWER_ADDITION, false);
         result = result_from_op;
     }
 
-    let higher_nibble = (result & 0b1111_0000) >> 4;
+    let higher_nibble = result >> 4;
 
-    if higher_nibble > 9 || state.condition_flags.carry {
+    // DAA seems to add to the higher nibble even if the lower nibble resulted in a carry,
+    // which would otherwise cause the higher nibble to now not be greater than 9
+    if higher_nibble > 9 || state.condition_flags.carry || carry {
         const HIGHER_ADDITION: u8 = 6 << 4;
-        let (result_from_op, carry_from_op) = result.overflowing_add(HIGHER_ADDITION);
-        carry |= carry_from_op;
+        let result_from_op = result.wrapping_add(HIGHER_ADDITION);
+        // DAA does not reset the carry flag if it is already set, even if the result does not require a carry
+        carry = true;
         auxiliary_carry |=
             bit_operations::calculate_auxiliary_carry(result, HIGHER_ADDITION, false);
         result = result_from_op;
@@ -1249,6 +1254,7 @@ mod tests {
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::A => 0b0111_1001 })
+                .condition_flag_values(hashmap! { ConditionFlag::Carry => true })
                 .build(),
         );
     }
@@ -1295,8 +1301,8 @@ mod tests {
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b0110_0000 })
                 .condition_flag_values(hashmap! {
-                    ConditionFlag::Zero => true,
                     ConditionFlag::Parity => true,
                     ConditionFlag::Carry => true,
                     ConditionFlag::AuxiliaryCarry => true,

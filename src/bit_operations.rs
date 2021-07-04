@@ -49,19 +49,27 @@ pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
 pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool) -> bool {
     let nibble_mask = 0b0000_1111;
     let lower_value_1 = value_1 & nibble_mask;
-    // Auxiliary carry on 8080 is implemented via unsigned addition
-    let lower_value_2 = if is_subtraction {
-        unsigned_sign_invert(value_2)
+    let lower_value_2 = value_2 & nibble_mask;
+    let result = if is_subtraction {
+        lower_value_1.wrapping_sub(lower_value_2)
     } else {
-        value_2
-    } & nibble_mask;
-    let result = lower_value_1.wrapping_add(lower_value_2);
-    is_bit_set(result, 4)
-}
-
-#[cfg_attr(test, mutate)]
-pub fn unsigned_sign_invert(value: u8) -> u8 {
-    (!value).wrapping_add(1)
+        lower_value_1.wrapping_add(lower_value_2)
+    };
+    let is_bit_set = is_bit_set(result, 4);
+    // Subtraction for the 8080 is implemented via unsigned addition, i.e. where
+    // the second argument is converted to its inverse and then added instead of subtracted.
+    // For the carry flag, the resulting flag is then inverted if it is a subtraction
+    // to represent a borrow instead of a carry.
+    // However, no such behaviour exists for the auxiliary carry flag -
+    // the flag is always treated as if it is an addition.
+    // Counter-intuitively, this means we actually need to account for this behaviour with our approach,
+    // inverting the flag if is a subtraction to simulate the (incorrect) behaviour.
+    // See https://retrocomputing.stackexchange.com/questions/12558/the-behavior-of-the-auxiliary-carry-flag-in-subtraction-on-intel-8080.
+    if is_subtraction {
+        !is_bit_set
+    } else {
+        is_bit_set
+    }
 }
 
 #[cfg_attr(test, mutate)]
