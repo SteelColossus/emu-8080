@@ -1,17 +1,22 @@
 use std::collections::HashMap;
 
-use emu_8080::{bit_operations, Ports, State};
 use log::debug;
 use maplit::hashmap;
 use sdl2::keyboard::Keycode;
 use sdl2::mixer;
 use sdl2::mixer::{Channel, Chunk};
+use sdl2::pixels::Color;
+
+use emu_8080::{bit_operations, Ports, State};
 
 pub trait Machine {
     fn get_state(&self) -> &State;
     fn get_state_mut(&mut self) -> &mut State;
     fn set_input_from_key(&mut self, key: Keycode, key_down: bool);
     fn set_ports_based_on_inputs(&mut self);
+    fn get_pixel_color(&self, _x: u32, _y: u32) -> Color {
+        Color::WHITE
+    }
 }
 
 pub struct SpaceInvadersMachine {
@@ -116,6 +121,17 @@ impl Machine for SpaceInvadersMachine {
                 7 => self.dip_switches.coin_info_off,
             },
         );
+    }
+
+    fn get_pixel_color(&self, x: u32, y: u32) -> Color {
+        // From https://tcrf.net/File:SpaceInvadersArcColorUseTV.png
+        if (32..64).contains(&y) {
+            Color::RED
+        } else if y >= 178 && (y < 240 || (24..136).contains(&x)) {
+            Color::GREEN
+        } else {
+            Color::WHITE
+        }
     }
 }
 
@@ -316,9 +332,17 @@ pub struct BootHillMachine {
 impl BootHillMachine {
     fn get_gun_state(&self, is_player_two: bool) -> u8 {
         let (gun_up, gun_middle, gun_down) = if is_player_two {
-            (self.inputs.p2_gun_up, self.inputs.p2_gun_middle, self.inputs.p2_gun_down)
+            (
+                self.inputs.p2_gun_up,
+                self.inputs.p2_gun_middle,
+                self.inputs.p2_gun_down,
+            )
         } else {
-            (self.inputs.p1_gun_up, self.inputs.p1_gun_middle, self.inputs.p1_gun_down)
+            (
+                self.inputs.p1_gun_up,
+                self.inputs.p1_gun_middle,
+                self.inputs.p1_gun_down,
+            )
         };
 
         // This maps the inputs to a so-called 'gun state', which is a set of bits
@@ -326,12 +350,12 @@ impl BootHillMachine {
         // This is not a complete set of these states (there are 7 distinct ones in total),
         // but this is about as good as you can hope to get with a digital control scheme.
         match (gun_up, gun_middle, gun_down) {
-            (true, true, false) => 0b001, // 2nd top
-            (false, true, true) => 0b100, // 2nd bottom
+            (true, true, false) => 0b001,  // 2nd top
+            (false, true, true) => 0b100,  // 2nd bottom
             (true, false, false) => 0b101, // Top
             (false, false, true) => 0b000, // Bottom
             (false, true, false) => 0b110, // 3rd bottom
-            (_, _, _) => 0b111, // Default
+            (_, _, _) => 0b111,            // Default
         }
     }
 }
