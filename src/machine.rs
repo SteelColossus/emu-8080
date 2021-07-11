@@ -313,6 +313,29 @@ pub struct BootHillMachine {
     dip_switches: BootHillDipSwitches,
 }
 
+impl BootHillMachine {
+    fn get_gun_state(&self, is_player_two: bool) -> u8 {
+        let (gun_up, gun_middle, gun_down) = if is_player_two {
+            (self.inputs.p2_gun_up, self.inputs.p2_gun_middle, self.inputs.p2_gun_down)
+        } else {
+            (self.inputs.p1_gun_up, self.inputs.p1_gun_middle, self.inputs.p1_gun_down)
+        };
+
+        // This maps the inputs to a so-called 'gun state', which is a set of bits
+        // the game uses to determine where the gun is pointing.
+        // This is not a complete set of these states (there are 7 distinct ones in total),
+        // but this is about as good as you can hope to get with a digital control scheme.
+        match (gun_up, gun_middle, gun_down) {
+            (true, true, false) => 0b001, // 2nd top
+            (false, true, true) => 0b100, // 2nd bottom
+            (true, false, false) => 0b101, // Top
+            (false, false, true) => 0b000, // Bottom
+            (false, true, false) => 0b110, // 3rd bottom
+            (_, _, _) => 0b111, // Default
+        }
+    }
+}
+
 impl Default for BootHillMachine {
     fn default() -> Self {
         BootHillMachine {
@@ -345,17 +368,25 @@ impl Machine for BootHillMachine {
             Keycode::Down => self.inputs.p1_move_down = key_down,
             Keycode::Left => self.inputs.p1_move_left = key_down,
             Keycode::Right => self.inputs.p1_move_right = key_down,
+            Keycode::U => self.inputs.p1_gun_up = key_down,
+            Keycode::J => self.inputs.p1_gun_middle = key_down,
+            Keycode::M => self.inputs.p1_gun_down = key_down,
             Keycode::Space => self.inputs.p1_shoot = key_down,
             Keycode::W => self.inputs.p2_up = key_down,
             Keycode::S => self.inputs.p2_down = key_down,
             Keycode::A => self.inputs.p2_left = key_down,
             Keycode::D => self.inputs.p2_right = key_down,
+            Keycode::R => self.inputs.p2_gun_up = key_down,
+            Keycode::F => self.inputs.p2_gun_middle = key_down,
+            Keycode::V => self.inputs.p2_gun_down = key_down,
             Keycode::Tab => self.inputs.p2_shoot = key_down,
             _ => {}
         };
     }
 
     fn set_ports_based_on_inputs(&mut self) {
+        let p2_gun_state = self.get_gun_state(true);
+
         set_in_port_from_flags(
             &mut self.state.ports,
             0,
@@ -364,9 +395,14 @@ impl Machine for BootHillMachine {
                 1 => !self.inputs.p2_down,
                 2 => !self.inputs.p2_left,
                 3 => !self.inputs.p2_right,
+                4 => bit_operations::is_bit_set(p2_gun_state, 0),
+                5 => bit_operations::is_bit_set(p2_gun_state, 1),
+                6 => bit_operations::is_bit_set(p2_gun_state, 2),
                 7 => !self.inputs.p2_shoot,
             },
         );
+
+        let p1_gun_state = self.get_gun_state(false);
 
         set_in_port_from_flags(
             &mut self.state.ports,
@@ -376,6 +412,9 @@ impl Machine for BootHillMachine {
                 1 => !self.inputs.p1_move_down,
                 2 => !self.inputs.p1_move_left,
                 3 => !self.inputs.p1_move_right,
+                4 => bit_operations::is_bit_set(p1_gun_state, 0),
+                5 => bit_operations::is_bit_set(p1_gun_state, 1),
+                6 => bit_operations::is_bit_set(p1_gun_state, 2),
                 7 => !self.inputs.p1_shoot,
             },
         );
@@ -482,12 +521,18 @@ struct BootHillInputs {
     p1_move_down: bool,
     p1_move_left: bool,
     p1_move_right: bool,
+    p1_gun_up: bool,
+    p1_gun_middle: bool,
+    p1_gun_down: bool,
     p1_shoot: bool,
     p2_start: bool,
     p2_up: bool,
     p2_down: bool,
     p2_left: bool,
     p2_right: bool,
+    p2_gun_up: bool,
+    p2_gun_middle: bool,
+    p2_gun_down: bool,
     p2_shoot: bool,
 }
 
