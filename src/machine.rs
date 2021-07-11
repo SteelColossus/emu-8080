@@ -93,7 +93,7 @@ impl Machine for SpaceInvadersMachine {
             &mut self.state.ports,
             1,
             hashmap! {
-                0 => self.inputs.credit,
+                0 => !self.inputs.credit,
                 1 => self.inputs.p2_start,
                 2 => self.inputs.p1_start,
                 4 => self.inputs.p1_shoot,
@@ -341,10 +341,10 @@ impl Machine for BootHillMachine {
             Keycode::RShift => self.inputs.credit = key_down,
             Keycode::Return => self.inputs.p1_start = key_down,
             Keycode::Backspace => self.inputs.p2_start = key_down,
-            Keycode::Up => self.inputs.p1_up = key_down,
-            Keycode::Down => self.inputs.p1_down = key_down,
-            Keycode::Left => self.inputs.p1_left = key_down,
-            Keycode::Right => self.inputs.p1_right = key_down,
+            Keycode::Up => self.inputs.p1_move_up = key_down,
+            Keycode::Down => self.inputs.p1_move_down = key_down,
+            Keycode::Left => self.inputs.p1_move_left = key_down,
+            Keycode::Right => self.inputs.p1_move_right = key_down,
             Keycode::Space => self.inputs.p1_shoot = key_down,
             Keycode::W => self.inputs.p2_up = key_down,
             Keycode::S => self.inputs.p2_down = key_down,
@@ -360,11 +360,11 @@ impl Machine for BootHillMachine {
             &mut self.state.ports,
             0,
             hashmap! {
-                0 => self.inputs.p2_up,
-                1 => self.inputs.p2_down,
-                2 => self.inputs.p2_left,
-                3 => self.inputs.p2_right,
-                7 => self.inputs.p2_shoot,
+                0 => !self.inputs.p2_up,
+                1 => !self.inputs.p2_down,
+                2 => !self.inputs.p2_left,
+                3 => !self.inputs.p2_right,
+                7 => !self.inputs.p2_shoot,
             },
         );
 
@@ -372,11 +372,11 @@ impl Machine for BootHillMachine {
             &mut self.state.ports,
             1,
             hashmap! {
-                0 => self.inputs.p1_up,
-                1 => self.inputs.p1_down,
-                2 => self.inputs.p1_left,
-                3 => self.inputs.p1_right,
-                7 => self.inputs.p1_shoot,
+                0 => !self.inputs.p1_move_up,
+                1 => !self.inputs.p1_move_down,
+                2 => !self.inputs.p1_move_left,
+                3 => !self.inputs.p1_move_right,
+                7 => !self.inputs.p1_shoot,
             },
         );
 
@@ -384,9 +384,14 @@ impl Machine for BootHillMachine {
             &mut self.state.ports,
             2,
             hashmap! {
-                5 => self.inputs.p1_start,
-                6 => self.inputs.credit,
-                7 => self.inputs.p2_start,
+                5 => !self.inputs.p1_start,
+                6 => !self.inputs.credit,
+                7 => !self.inputs.p2_start,
+                0 => self.dip_switches.coinage_low,
+                1 => self.dip_switches.coinage_high,
+                2 => self.dip_switches.game_time_low,
+                3 => self.dip_switches.game_time_high,
+                4 => self.dip_switches.service_mode,
             },
         );
     }
@@ -473,10 +478,10 @@ impl Ports for BootHillPorts {
 struct BootHillInputs {
     credit: bool,
     p1_start: bool,
-    p1_up: bool,
-    p1_down: bool,
-    p1_left: bool,
-    p1_right: bool,
+    p1_move_up: bool,
+    p1_move_down: bool,
+    p1_move_left: bool,
+    p1_move_right: bool,
     p1_shoot: bool,
     p2_start: bool,
     p2_up: bool,
@@ -486,5 +491,22 @@ struct BootHillInputs {
     p2_shoot: bool,
 }
 
-#[derive(Default)]
-struct BootHillDipSwitches {}
+struct BootHillDipSwitches {
+    coinage_low: bool,
+    coinage_high: bool,
+    game_time_low: bool,
+    game_time_high: bool,
+    service_mode: bool,
+}
+
+impl Default for BootHillDipSwitches {
+    fn default() -> Self {
+        BootHillDipSwitches {
+            coinage_low: false,
+            coinage_high: false,
+            game_time_low: true,
+            game_time_high: false,
+            service_mode: false,
+        }
+    }
+}
