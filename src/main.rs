@@ -18,10 +18,11 @@ use crate::machine::{BootHillMachine, Machine, SpaceInvadersMachine};
 mod machine;
 
 const FRAME_RATE: u64 = 60;
-const SCREEN_WIDTH: u32 = 224;
-const SCREEN_HEIGHT: u32 = 256;
+const ORIGINAL_SCREEN_WIDTH: u32 = 256;
+const ORIGINAL_SCREEN_HEIGHT: u32 = 224;
 const NUM_PIXEL_COMPONENTS: usize = 3;
-const SCREEN_DATA_SIZE: usize = (SCREEN_WIDTH * SCREEN_HEIGHT) as usize * NUM_PIXEL_COMPONENTS;
+const SCREEN_DATA_SIZE: usize =
+    (ORIGINAL_SCREEN_WIDTH * ORIGINAL_SCREEN_HEIGHT) as usize * NUM_PIXEL_COMPONENTS;
 
 fn main() -> Result<(), String> {
     env_logger::init();
@@ -41,8 +42,9 @@ fn main() -> Result<(), String> {
     };
     machine.get_state_mut().load_memory(file_bytes);
 
+    let (screen_width, screen_height) = get_screen_dimensions(&*machine);
     let window = video_subsystem
-        .window("Space Invaders", SCREEN_WIDTH * 4, SCREEN_HEIGHT * 4)
+        .window("Space Invaders", screen_width * 4, screen_height * 4)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
@@ -52,7 +54,7 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, SCREEN_WIDTH, SCREEN_HEIGHT)
+        .create_texture_streaming(PixelFormatEnum::RGB24, screen_width, screen_height)
         .map_err(|e| e.to_string())?;
 
     canvas.set_draw_color(Color::BLACK);
@@ -69,20 +71,24 @@ fn main() -> Result<(), String> {
 
         let duration = timer.elapsed();
 
-        if duration > Duration::from_micros(1_000_000 / FRAME_RATE / SCREEN_HEIGHT as u64) {
+        if duration > Duration::from_micros(1_000_000 / FRAME_RATE / screen_height as u64) {
             timer = Instant::now();
             current_screen_line += 1;
-            generate_video_interrupts_if_needed(&mut machine.get_state_mut(), current_screen_line);
+            generate_video_interrupts_if_needed(
+                &mut machine.get_state_mut(),
+                current_screen_line,
+                screen_height,
+            );
         }
 
-        if current_screen_line >= SCREEN_HEIGHT {
+        if current_screen_line >= screen_height {
             current_screen_line = 0;
-            let screen_pixel_data = get_screen_pixel_data(&machine);
+            let screen_pixel_data = get_screen_pixel_data(&*machine);
             texture
                 .update(
                     None,
                     &screen_pixel_data,
-                    SCREEN_WIDTH as usize * NUM_PIXEL_COMPONENTS,
+                    screen_width as usize * NUM_PIXEL_COMPONENTS,
                 )
                 .map_err(|e| e.to_string())?;
 
@@ -103,6 +109,22 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
+fn get_screen_dimensions(machine: &dyn Machine) -> (u32, u32) {
+    let screen_orientation = machine.get_orientation();
+    let is_screen_rotated = (screen_orientation % 360 / 90) % 2 == 1;
+    let screen_width = if is_screen_rotated {
+        ORIGINAL_SCREEN_HEIGHT
+    } else {
+        ORIGINAL_SCREEN_WIDTH
+    };
+    let screen_height = if is_screen_rotated {
+        ORIGINAL_SCREEN_WIDTH
+    } else {
+        ORIGINAL_SCREEN_HEIGHT
+    };
+    (screen_width, screen_height)
+}
+
 fn raise_interrupt(state: &mut State, reset_index: u8) {
     if state.are_interrupts_enabled {
         debug!("-- Raised interrupt with reset index of {} --", reset_index);
@@ -110,34 +132,40 @@ fn raise_interrupt(state: &mut State, reset_index: u8) {
     }
 }
 
-fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32) {
+fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32, max_screen_line: u32) {
     // From http://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html
     if screen_line == 96 {
         raise_interrupt(state, 1);
-    } else if screen_line == SCREEN_HEIGHT {
+    } else if screen_line == max_screen_line {
         raise_interrupt(state, 2);
     }
 }
 
-fn get_screen_pixel_data(machine: &Box<dyn Machine>) -> [u8; SCREEN_DATA_SIZE] {
+fn get_screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
     const VIDEO_MEMORY_START: u16 = 0x2400;
-    const NUM_BYTES_PER_COLUMN: u32 = SCREEN_HEIGHT / 8;
+    let num_bytes_per_original_row: u32 = ORIGINAL_SCREEN_WIDTH / 8;
     let mut screen_pixel_data = [0b0000_0000; SCREEN_DATA_SIZE];
     let state = machine.get_state();
 
-    for screen_row_byte in 0..NUM_BYTES_PER_COLUMN {
-        for screen_column in 0..SCREEN_WIDTH {
+    let (screen_width, screen_height) = get_screen_dimensions(machine);
+    let screen_orientation = machine.get_orientation();
+
+    for original_screen_row in 0..ORIGINAL_SCREEN_HEIGHT {
+        for original_screen_column_byte in 0..num_bytes_per_original_row {
             let memory_address = VIDEO_MEMORY_START
-                + (screen_column * NUM_BYTES_PER_COLUMN
-                    + (NUM_BYTES_PER_COLUMN - screen_row_byte - 1)) as u16;
+                + (original_screen_row * num_bytes_per_original_row + original_screen_column_byte)
+                    as u16;
             let memory_value = state.get_value_at_memory_location(memory_address);
 
             if memory_value != 0b0000_0000 {
-                set_row_byte_pixels(
-                    &machine,
+                set_original_column_byte_pixels(
+                    machine,
                     &mut screen_pixel_data,
-                    screen_row_byte,
-                    screen_column,
+                    screen_width,
+                    screen_height,
+                    screen_orientation,
+                    original_screen_column_byte,
+                    original_screen_row,
                     memory_value,
                 )
             }
@@ -147,30 +175,54 @@ fn get_screen_pixel_data(machine: &Box<dyn Machine>) -> [u8; SCREEN_DATA_SIZE] {
     screen_pixel_data
 }
 
-fn set_row_byte_pixels(
-    machine: &Box<dyn Machine>,
+fn set_original_column_byte_pixels(
+    machine: &dyn Machine,
     screen_pixel_data: &mut [u8; SCREEN_DATA_SIZE],
-    screen_row_byte: u32,
-    screen_column: u32,
+    screen_width: u32,
+    screen_height: u32,
+    screen_orientation: u32,
+    original_screen_column_byte: u32,
+    original_screen_row: u32,
     memory_value: u8,
 ) {
+    let num_screen_turns = screen_orientation % 360 / 90;
+
     for bit_index in 0_u8..=7_u8 {
         let is_bit_set = emu_8080::bit_operations::is_bit_set(memory_value, bit_index);
 
         if is_bit_set {
-            let screen_row = screen_row_byte * 8 + (7 - bit_index) as u32;
-            let index = (screen_row * SCREEN_WIDTH + screen_column) as usize * NUM_PIXEL_COMPONENTS;
+            let original_screen_column = original_screen_column_byte * 8 + bit_index as u32;
+
+            let (x, y) = match num_screen_turns {
+                0 => (original_screen_column, original_screen_row),
+                1 => (
+                    (screen_width - 1) - original_screen_row,
+                    original_screen_column,
+                ),
+                2 => (
+                    (screen_width - 1) - original_screen_column,
+                    (screen_height - 1) - original_screen_row,
+                ),
+                3 => (
+                    original_screen_row,
+                    (screen_height - 1) - original_screen_column,
+                ),
+                _ => unreachable!(),
+            };
+
+            let index = (y * screen_width + x) as usize * NUM_PIXEL_COMPONENTS;
+
             set_pixel(
-                &machine,
+                machine,
                 &mut screen_pixel_data[index..(index + NUM_PIXEL_COMPONENTS)],
-                screen_column,
-                screen_row,
+                x,
+                y,
             );
         }
     }
 }
 
-fn set_pixel(machine: &Box<dyn Machine>, pixel_slice: &mut [u8], x: u32, y: u32) {
+fn set_pixel(machine: &dyn Machine, pixel_slice: &mut [u8], x: u32, y: u32) {
     let color = machine.get_pixel_color(x, y);
     pixel_slice[0] = color.r;
     pixel_slice[1] = color.g;

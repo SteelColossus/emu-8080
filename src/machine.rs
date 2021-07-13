@@ -17,6 +17,9 @@ pub trait Machine {
     fn get_pixel_color(&self, _x: u32, _y: u32) -> Color {
         Color::WHITE
     }
+    fn get_orientation(&self) -> u32 {
+        0
+    }
 }
 
 pub struct SpaceInvadersMachine {
@@ -132,6 +135,10 @@ impl Machine for SpaceInvadersMachine {
         } else {
             Color::WHITE
         }
+    }
+
+    fn get_orientation(&self) -> u32 {
+        270
     }
 }
 
