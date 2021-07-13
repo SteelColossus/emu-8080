@@ -20,6 +20,7 @@ pub trait Machine {
     fn get_orientation(&self) -> u32 {
         0
     }
+    fn get_name(&self) -> &str;
 }
 
 pub struct SpaceInvadersMachine {
@@ -139,6 +140,10 @@ impl Machine for SpaceInvadersMachine {
 
     fn get_orientation(&self) -> u32 {
         270
+    }
+
+    fn get_name(&self) -> &str {
+        "Space Invaders"
     }
 }
 
@@ -464,6 +469,10 @@ impl Machine for BootHillMachine {
                 4 => self.dip_switches.service_mode,
             },
         );
+    }
+
+    fn get_name(&self) -> &str {
+        "Boot Hill"
     }
 }
 

@@ -1,6 +1,6 @@
 extern crate sdl2;
 
-use std::fs;
+use std::{fs, env};
 use std::time::{Duration, Instant};
 
 use log::debug;
@@ -27,8 +27,9 @@ const SCREEN_DATA_SIZE: usize =
 fn main() -> Result<(), String> {
     env_logger::init();
 
-    let file_name = "boothill.bin";
-    let file_bytes = fs::read(file_name).unwrap();
+    let args: Vec<String> = env::args().collect();
+    let file_name = args.get(1).expect("Must provide a filename argument for a game to play").as_str();
+    let file_bytes = fs::read(file_name).unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -44,7 +45,7 @@ fn main() -> Result<(), String> {
 
     let (screen_width, screen_height) = get_screen_dimensions(&*machine);
     let window = video_subsystem
-        .window("Space Invaders", screen_width * 4, screen_height * 4)
+        .window(machine.get_name(), screen_width * 4, screen_height * 4)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
