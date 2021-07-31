@@ -23,6 +23,44 @@ pub trait Machine {
     fn get_name(&self) -> &str;
 }
 
+pub struct BlankMachine {
+    state: State,
+    machine_name: String,
+    orientation: u32,
+}
+
+impl BlankMachine {
+    pub fn with_name_and_orientation(machine_name: String, orientation: u32) -> Self {
+        BlankMachine {
+            state: State::default(),
+            machine_name,
+            orientation,
+        }
+    }
+}
+
+impl Machine for BlankMachine {
+    fn get_state(&self) -> &State {
+        &self.state
+    }
+
+    fn get_state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
+    fn set_input_from_key(&mut self, key: Keycode, key_down: bool) {}
+
+    fn set_ports_based_on_inputs(&mut self) {}
+
+    fn get_orientation(&self) -> u32 {
+        self.orientation
+    }
+
+    fn get_name(&self) -> &str {
+        &self.machine_name
+    }
+}
+
 pub struct SpaceInvadersMachine {
     state: State,
     inputs: SpaceInvadersInputs,

@@ -1,7 +1,7 @@
 extern crate sdl2;
 
-use std::{fs, env};
 use std::time::{Duration, Instant};
+use std::{env, fs};
 
 use log::debug;
 use sdl2::event::Event;
@@ -13,7 +13,7 @@ use sdl2::EventPump;
 
 use emu_8080::{runner, State};
 
-use crate::machine::{BootHillMachine, Machine, SpaceInvadersMachine};
+use crate::machine::Machine;
 
 mod machine;
 
@@ -28,20 +28,42 @@ fn main() -> Result<(), String> {
     env_logger::init();
 
     let args: Vec<String> = env::args().collect();
-    let file_name = args.get(1).expect("Must provide a filename argument for a game to play").as_str();
-    let file_bytes = fs::read(file_name).unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
+    let file_name = args
+        .get(1)
+        .expect("Must provide a filename argument for a game to play")
+        .as_str();
+
+    let expected_extension = ".bin";
+    let mut machine: Box<dyn Machine> = match file_name {
+        "invaders.bin" => Box::new(machine::SpaceInvadersMachine::default()),
+        "boothill.bin" => Box::new(machine::BootHillMachine::default()),
+        _ => {
+            if &file_name[file_name.len() - expected_extension.len()..file_name.len()]
+                == expected_extension
+            {
+                let machine_name = &file_name[..file_name.len() - expected_extension.len()];
+                let orientation = match machine_name {
+                    "lagunar" => 90,
+                    _ => 0,
+                };
+                Box::new(machine::BlankMachine::with_name_and_orientation(
+                    machine_name.to_string(),
+                    orientation,
+                ))
+            } else {
+                panic!("Can't play game with filename {}", file_name);
+            }
+        }
+    };
+
+    let file_bytes = fs::read(file_name)
+        .unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
+    machine.get_state_mut().load_memory(file_bytes);
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     // Based on audio file bitrate of 88kbps
     mixer::open_audio(11_025, mixer::AUDIO_U8, 1, 1_024)?;
-
-    let mut machine: Box<dyn Machine> = match file_name {
-        "invaders.bin" => Box::new(SpaceInvadersMachine::default()),
-        "boothill.bin" => Box::new(BootHillMachine::default()),
-        _ => panic!("Can't play game with filename {}", file_name),
-    };
-    machine.get_state_mut().load_memory(file_bytes);
 
     let (screen_width, screen_height) = get_screen_dimensions(&*machine);
     let window = video_subsystem
