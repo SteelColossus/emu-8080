@@ -102,4 +102,10 @@ mod tests {
     fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
         set_bit_in_value(&mut 127, 8, true);
     }
+    
+    #[test]
+    fn reverse_byte_reverses_a_byte() {
+        assert_eq!(reverse_byte(0b1011_1000), 0b0001_1101);
+        assert_eq!(reverse_byte(0b11_1001), 0b1001_1100);
+    }
 }

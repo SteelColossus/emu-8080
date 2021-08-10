@@ -48,7 +48,7 @@ impl Machine for BlankMachine {
         &mut self.state
     }
 
-    fn set_input_from_key(&mut self, key: Keycode, key_down: bool) {}
+    fn set_input_from_key(&mut self, _key: Keycode, _key_down: bool) {}
 
     fn set_ports_based_on_inputs(&mut self) {}
 

@@ -6,7 +6,6 @@ use crate::{
     transfer_instructions, Operation, Register, State,
 };
 
-#[cfg_attr(test, mutate)]
 pub fn run_operation(
     operation: &Operation,
     state: &mut State,

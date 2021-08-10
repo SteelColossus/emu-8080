@@ -43,8 +43,8 @@ pub fn aci_instruction(state: &mut State, data: u8) {
     let (carry_from_carry, auxiliary_carry_from_carry) =
         state.increase_register(Register::A, carry_value);
     state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = main_carry | carry_from_carry;
-    state.condition_flags.auxiliary_carry = main_auxiliary_carry | auxiliary_carry_from_carry;
+    state.condition_flags.carry = main_carry || carry_from_carry;
+    state.condition_flags.auxiliary_carry = main_auxiliary_carry || auxiliary_carry_from_carry;
 }
 
 #[cfg_attr(test, mutate)]
@@ -88,10 +88,10 @@ pub fn sbi_instruction(state: &mut State, data: u8) {
     let (borrow_from_borrow, auxiliary_borrow_from_borrow) =
         state.decrease_register(Register::A, carry_value);
     state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = main_borrow | borrow_from_borrow;
+    state.condition_flags.carry = main_borrow || borrow_from_borrow;
     // This was found through trial and error so may be incorrect, but in a way makes sense -
     // instead of an 'or' we use an 'and', to account for the auxiliary carry being the opposite of what it should be.
-    state.condition_flags.auxiliary_carry = main_auxiliary_borrow & auxiliary_borrow_from_borrow;
+    state.condition_flags.auxiliary_carry = main_auxiliary_borrow && auxiliary_borrow_from_borrow;
 }
 
 #[cfg_attr(test, mutate)]
@@ -940,14 +940,14 @@ mod tests {
     fn inr_mem_increments_existing_memory_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 132, Register::L => 55 })
-            .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 8, 0x8438 => 109 })
+            .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 14, 0x8438 => 109 })
             .build();
         inr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::H => 132, Register::L => 55 })
-                .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 9, 0x8438 => 109 })
+                .memory_values(hashmap! { 0x8436 => 13, 0x8437 => 15, 0x8438 => 109 })
                 .condition_flag_values(hashmap! { ConditionFlag::Parity => true })
                 .build(),
         );
@@ -1008,19 +1008,15 @@ mod tests {
     fn dcr_mem_decrements_existing_memory_value() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::H => 191, Register::L => 154 })
-            .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 233, 0xBF9B => 83 })
+            .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 225, 0xBF9B => 83 })
             .build();
         dcr_mem_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
             &StateBuilder::default()
                 .register_values(hashmap! { Register::H => 191, Register::L => 154 })
-                .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 232, 0xBF9B => 83 })
-                .condition_flag_values(hashmap! {
-                    ConditionFlag::Sign => true,
-                    ConditionFlag::Parity => true,
-                    ConditionFlag::AuxiliaryCarry => true,
-                })
+                .memory_values(hashmap! { 0xBF99 => 87, 0xBF9A => 224, 0xBF9B => 83 })
+                .condition_flag_values(hashmap! { ConditionFlag::Sign => true, ConditionFlag::AuxiliaryCarry => true })
                 .build(),
         );
     }

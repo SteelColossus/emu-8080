@@ -263,6 +263,21 @@ mod tests {
     }
 
     #[test]
+    fn ani_sets_the_auxiliary_carry_flag_if_condition_matches() {
+        let mut state = StateBuilder::default()
+            .register_values(hashmap! { Register::A => 0b00101010 })
+            .build();
+        ani_instruction(&mut state, 0b00111100);
+        assert_state_is_as_expected(
+            &state,
+            &StateBuilder::default()
+                .register_values(hashmap! { Register::A => 0b00101000 })
+                .condition_flag_values(hashmap! { ConditionFlag::Parity => true, ConditionFlag::AuxiliaryCarry => true })
+                .build(),
+        );
+    }
+
+    #[test]
     fn xra_logically_xors_the_accumulator_with_the_value_of_the_given_register() {
         let mut state = StateBuilder::default()
             .register_values(hashmap! { Register::A => 0b01010100, Register::B => 0b01000101 })

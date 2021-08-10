@@ -257,7 +257,6 @@ impl State {
         *register_to_set = value;
     }
 
-    #[cfg_attr(test, mutate)]
     pub fn load_memory(&mut self, contiguous_memory_bytes: Vec<u8>) {
         for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
             self.set_value_at_memory_location(memory_address as u16, *memory_value);
@@ -367,7 +366,6 @@ impl State {
         self.cpu_total_state_count
     }
 
-    #[cfg_attr(test, mutate)]
     pub fn run_operation(&mut self, operation: Operation) {
         let op_code_pc = self.program_counter;
         self.program_counter += 1;
@@ -596,7 +594,6 @@ pub enum Operation {
 }
 
 impl Operation {
-    #[cfg_attr(test, mutate)]
     pub fn additional_data_required(&self) -> InstructionDataType {
         match self {
             Operation::Mvi(_) => InstructionDataType::Single,
@@ -624,7 +621,6 @@ impl Operation {
         }
     }
 
-    #[cfg_attr(test, mutate)]
     pub fn machine_cycles(&self, state: &State) -> u8 {
         match self {
             Operation::Mov(_, _) => 1,
@@ -685,7 +681,6 @@ impl Operation {
 
     // This confusing terminology comes from the 8080 manual:
     // a state really refers to the smallest unit of processing activity.
-    #[cfg_attr(test, mutate)]
     pub fn machine_states(&self, state: &State) -> u8 {
         match self {
             Operation::Mov(_, _) => 5,
@@ -761,6 +756,7 @@ mod tests {
     fn default_state_has_all_default_values() {
         let state = State::default();
         assert_state_is_as_expected(&state, &State::default());
+        assert_eq!(state.get_cpu_total_state_count(), 0);
     }
 
     #[test]
