@@ -1,44 +1,45 @@
-use crate::{bit_operations, Register, RegisterPair, State};
+use crate::{bit_operations, ConditionFlag, Register, RegisterPair, State};
 #[cfg(test)]
 use mutagen::mutate;
 
 #[cfg_attr(test, mutate)]
 pub fn ana_instruction(state: &mut State, source_register: Register) {
-    let source_register_value = state.get_register_value(source_register);
+    let source_register_value = state.registers[source_register];
     ani_instruction(state, source_register_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ana_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
-    let memory_value = state.get_value_at_memory_location(memory_address);
+    let memory_value = state.memory[memory_address as usize];
     ani_instruction(state, memory_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ani_instruction(state: &mut State, data: u8) {
-    let accumulator_value = state.get_register_value(Register::A);
+    let accumulator_value = state.registers[Register::A];
     state.set_register_by_function_with_value(Register::A, data, |value, target_value| {
         value & target_value
     });
     state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = false;
+    state.condition_flags[ConditionFlag::Carry] = false;
     // This behaviour is described in the '8080/8085 Assembly Language Programming Manual'.
     // The regular manual says that ANI clears the carry flag, however the programming manual does not,
     // so assume the latter as it makes more sense.
-    state.condition_flags.auxiliary_carry = bit_operations::is_bit_set(accumulator_value | data, 3);
+    state.condition_flags[ConditionFlag::AuxiliaryCarry] =
+        bit_operations::is_bit_set(accumulator_value | data, 3);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn xra_instruction(state: &mut State, source_register: Register) {
-    let source_register_value = state.get_register_value(source_register);
+    let source_register_value = state.registers[source_register];
     xri_instruction(state, source_register_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn xra_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
-    let memory_value = state.get_value_at_memory_location(memory_address);
+    let memory_value = state.memory[memory_address as usize];
     xri_instruction(state, memory_value);
 }
 
@@ -48,20 +49,20 @@ pub fn xri_instruction(state: &mut State, data: u8) {
         value ^ target_value
     });
     state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = false;
-    state.condition_flags.auxiliary_carry = false;
+    state.condition_flags[ConditionFlag::Carry] = false;
+    state.condition_flags[ConditionFlag::AuxiliaryCarry] = false;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ora_instruction(state: &mut State, source_register: Register) {
-    let source_register_value = state.get_register_value(source_register);
+    let source_register_value = state.registers[source_register];
     ori_instruction(state, source_register_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ora_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
-    let memory_value = state.get_value_at_memory_location(memory_address);
+    let memory_value = state.memory[memory_address as usize];
     ori_instruction(state, memory_value);
 }
 
@@ -71,85 +72,85 @@ pub fn ori_instruction(state: &mut State, data: u8) {
         value | target_value
     });
     state.set_condition_flags_from_register_value(Register::A);
-    state.condition_flags.carry = false;
-    state.condition_flags.auxiliary_carry = false;
+    state.condition_flags[ConditionFlag::Carry] = false;
+    state.condition_flags[ConditionFlag::AuxiliaryCarry] = false;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn cmp_instruction(state: &mut State, register: Register) {
-    let register_value = state.get_register_value(register);
+    let register_value = state.registers[register];
     cpi_instruction(state, register_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn cmp_mem_instruction(state: &mut State) {
     let memory_address = RegisterPair::HL.get_full_value(state);
-    let memory_value = state.get_value_at_memory_location(memory_address);
+    let memory_value = state.memory[memory_address as usize];
     cpi_instruction(state, memory_value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn cpi_instruction(state: &mut State, data: u8) {
-    let accumulator_value = state.get_register_value(Register::A);
+    let accumulator_value = state.registers[Register::A];
     let (result, borrow) = accumulator_value.overflowing_sub(data);
     state.set_condition_flags_from_result(result);
-    state.condition_flags.carry = borrow;
-    state.condition_flags.auxiliary_carry =
+    state.condition_flags[ConditionFlag::Carry] = borrow;
+    state.condition_flags[ConditionFlag::AuxiliaryCarry] =
         bit_operations::calculate_auxiliary_carry(accumulator_value, data, true);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn rlc_instruction(state: &mut State) {
-    let accumulator_value = state.get_register_value(Register::A);
-    state.set_register(Register::A, accumulator_value.rotate_left(1));
-    state.condition_flags.carry = bit_operations::is_bit_set(accumulator_value, 7);
+    let accumulator_value = state.registers[Register::A];
+    state.registers[Register::A] = accumulator_value.rotate_left(1);
+    state.condition_flags[ConditionFlag::Carry] = bit_operations::is_bit_set(accumulator_value, 7);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn rrc_instruction(state: &mut State) {
-    let accumulator_value = state.get_register_value(Register::A);
-    state.set_register(Register::A, accumulator_value.rotate_right(1));
-    state.condition_flags.carry = bit_operations::is_bit_set(accumulator_value, 0);
+    let accumulator_value = state.registers[Register::A];
+    state.registers[Register::A] = accumulator_value.rotate_right(1);
+    state.condition_flags[ConditionFlag::Carry] = bit_operations::is_bit_set(accumulator_value, 0);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn ral_instruction(state: &mut State) {
-    let accumulator_value = state.get_register_value(Register::A);
-    let previous_carry = state.condition_flags.carry;
+    let accumulator_value = state.registers[Register::A];
+    let previous_carry = state.condition_flags[ConditionFlag::Carry];
     let mut result = accumulator_value.rotate_left(1);
     let bit_index = 0;
     let carry = bit_operations::is_bit_set(result, bit_index);
     bit_operations::set_bit_in_value(&mut result, bit_index, previous_carry);
-    state.set_register(Register::A, result);
-    state.condition_flags.carry = carry;
+    state.registers[Register::A] = result;
+    state.condition_flags[ConditionFlag::Carry] = carry;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn rar_instruction(state: &mut State) {
-    let accumulator_value = state.get_register_value(Register::A);
-    let previous_carry = state.condition_flags.carry;
+    let accumulator_value = state.registers[Register::A];
+    let previous_carry = state.condition_flags[ConditionFlag::Carry];
     let mut result = accumulator_value.rotate_right(1);
     let bit_index = 7;
     let carry = bit_operations::is_bit_set(result, bit_index);
     bit_operations::set_bit_in_value(&mut result, bit_index, previous_carry);
-    state.set_register(Register::A, result);
-    state.condition_flags.carry = carry;
+    state.registers[Register::A] = result;
+    state.condition_flags[ConditionFlag::Carry] = carry;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn cma_instruction(state: &mut State) {
-    let accumulator_value = state.get_register_value(Register::A);
-    state.set_register(Register::A, !accumulator_value);
+    let accumulator_value = state.registers[Register::A];
+    state.registers[Register::A] = !accumulator_value;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn cmc_instruction(state: &mut State) {
-    state.condition_flags.carry = !state.condition_flags.carry;
+    state.condition_flags[ConditionFlag::Carry] = !state.condition_flags[ConditionFlag::Carry];
 }
 
 #[cfg_attr(test, mutate)]
 pub fn stc_instruction(state: &mut State) {
-    state.condition_flags.carry = true;
+    state.condition_flags[ConditionFlag::Carry] = true;
 }
 
 #[cfg(test)]

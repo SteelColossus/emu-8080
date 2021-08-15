@@ -4,14 +4,14 @@ use std::io::Write;
 use std::path::PathBuf;
 
 fn run_next_operation(state: &mut State) -> bool {
-    let memory_value = state.get_memory_value_at_program_counter();
+    let memory_value = state.memory_value_at_pc();
     let operation = disassembler::disassemble_op_code(memory_value);
     let is_out_operation = operation == Operation::Out;
 
     state.run_operation(operation);
 
     if is_out_operation {
-        let port_number = state.get_value_at_memory_location(state.program_counter - 1);
+        let port_number = state.memory[(state.program_counter - 1) as usize];
         match port_number {
             0 => return true,
             1 => print_test_output(state),
@@ -23,11 +23,11 @@ fn run_next_operation(state: &mut State) -> bool {
 }
 
 fn print_test_output(state: &State) {
-    let register_c = state.get_register_value(Register::C);
+    let register_c = state.registers[Register::C];
 
     match register_c {
         2 => {
-            let register_e = state.get_register_value(Register::E);
+            let register_e = state.registers[Register::E];
             print!("{}", register_e as char);
         }
         9 => {
@@ -35,7 +35,7 @@ fn print_test_output(state: &State) {
             let mut memory_character: char;
 
             loop {
-                memory_character = state.get_value_at_memory_location(memory_address) as char;
+                memory_character = state.memory[memory_address as usize] as char;
                 if memory_character == '$' {
                     break;
                 } else {
@@ -80,7 +80,7 @@ fn init() {
 }
 
 fn assert_cpu_cycles_are_as_expected(state: &State, expected_cpu_cycles: usize) {
-    let actual_cpu_cycles = state.get_cpu_total_state_count();
+    let actual_cpu_cycles = state.cpu_total_state_count();
     assert_eq!(
         actual_cpu_cycles, expected_cpu_cycles,
         "Expected test to take {} cycles, but it actually took {} cycles",

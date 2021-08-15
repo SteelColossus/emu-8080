@@ -8,9 +8,10 @@ edition = "2018"
 
 [dependencies]
 maplit = "1.0.2"
+enum-map = "1.1.1"
 sdl2 = { version = "0.34.5", features = ["mixer"] }
 log = "0.4.14"
-env_logger = "0.8.3"
+env_logger = "0.9.0"
 
 [dev-dependencies]
 mutagen = { git = "https://github.com/llogiq/mutagen" }

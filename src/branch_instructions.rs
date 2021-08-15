@@ -31,8 +31,8 @@ pub fn call_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let (pc_low, pc_high) = bit_operations::split_to_low_high_bytes(state.program_counter);
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
-    state.set_value_at_memory_location(sp_minus_one, pc_high);
-    state.set_value_at_memory_location(sp_minus_two, pc_low);
+    state.memory[sp_minus_one as usize] = pc_high;
+    state.memory[sp_minus_two as usize] = pc_low;
     state.stack_pointer = sp_minus_two;
     state.program_counter = bit_operations::concat_low_high_bytes(low_data, high_data);
 }
@@ -48,8 +48,8 @@ pub fn ccond_instruction(state: &mut State, low_data: u8, high_data: u8, conditi
 pub fn ret_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
-    let value_for_pc_low = state.get_value_at_memory_location(state.stack_pointer);
-    let value_for_pc_high = state.get_value_at_memory_location(sp_plus_one);
+    let value_for_pc_low = state.memory[state.stack_pointer as usize];
+    let value_for_pc_high = state.memory[sp_plus_one as usize];
     state.program_counter =
         bit_operations::concat_low_high_bytes(value_for_pc_low, value_for_pc_high);
     state.stack_pointer = sp_plus_two;

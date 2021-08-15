@@ -178,7 +178,7 @@ fn get_screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
             let memory_address = VIDEO_MEMORY_START
                 + (original_screen_row * num_bytes_per_original_row + original_screen_column_byte)
                     as u16;
-            let memory_value = state.get_value_at_memory_location(memory_address);
+            let memory_value = state.memory[memory_address as usize];
 
             if memory_value != 0b0000_0000 {
                 set_original_column_byte_pixels(

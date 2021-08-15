@@ -1,6 +1,3 @@
-#[cfg(test)]
-use mutagen::mutate;
-
 use crate::{
     arithmetic_instructions, branch_instructions, logical_instructions, stack_instructions,
     transfer_instructions, Operation, Register, State,
@@ -139,10 +136,12 @@ pub fn run_operation(
         Operation::PopPsw => stack_instructions::pop_psw_instruction(state),
         Operation::Xthl => stack_instructions::xthl_instruction(state),
         Operation::Sphl => stack_instructions::sphl_instruction(state),
-        Operation::In => state.set_register(Register::A, state.ports.read_in_port(get_low_data())),
+        Operation::In => {
+            state.registers[Register::A] = state.ports.read_in_port(get_low_data());
+        }
         Operation::Out => state
             .ports
-            .write_out_port(get_low_data(), state.get_register_value(Register::A)),
+            .write_out_port(get_low_data(), state.registers[Register::A]),
         Operation::Ei => stack_instructions::ei_instruction(state),
         Operation::Di => stack_instructions::di_instruction(state),
         Operation::Hlt => todo!(),
@@ -159,7 +158,7 @@ pub fn run_operation(
 }
 
 pub fn run_next_operation(state: &mut State) {
-    let memory_value = state.get_memory_value_at_program_counter();
+    let memory_value = state.memory_value_at_pc();
     let operation = crate::disassembler::disassemble_op_code(memory_value);
     state.run_operation(operation);
 }

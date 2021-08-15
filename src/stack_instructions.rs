@@ -14,8 +14,8 @@ pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     let (register_pair_low, register_pair_high) = register_pair.get_low_high_value(state);
-    state.set_value_at_memory_location(sp_minus_one, register_pair_high);
-    state.set_value_at_memory_location(sp_minus_two, register_pair_low);
+    state.memory[sp_minus_one as usize] = register_pair_high;
+    state.memory[sp_minus_two as usize] = register_pair_low;
     state.stack_pointer = sp_minus_two;
 }
 
@@ -23,10 +23,10 @@ pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
 pub fn push_psw_instruction(state: &mut State) {
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
-    let accumulator_value = state.get_register_value(Register::A);
-    state.set_value_at_memory_location(sp_minus_one, accumulator_value);
+    let accumulator_value = state.registers[Register::A];
+    state.memory[sp_minus_one as usize] = accumulator_value;
     let condition_flag_byte = state.get_condition_flag_byte();
-    state.set_value_at_memory_location(sp_minus_two, condition_flag_byte);
+    state.memory[sp_minus_two as usize] = condition_flag_byte;
     state.stack_pointer = sp_minus_two;
 }
 
@@ -41,8 +41,8 @@ pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
 
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
-    let value_for_register_pair_low = state.get_value_at_memory_location(state.stack_pointer);
-    let value_for_register_pair_high = state.get_value_at_memory_location(sp_plus_one);
+    let value_for_register_pair_low = state.memory[state.stack_pointer as usize];
+    let value_for_register_pair_high = state.memory[sp_plus_one as usize];
     register_pair.set_low_high_value(
         state,
         value_for_register_pair_low,
@@ -56,22 +56,22 @@ pub fn pop_psw_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
     state.set_condition_flag_byte(state.stack_pointer);
-    let accumulator_value = state.get_value_at_memory_location(sp_plus_one);
-    state.set_register(Register::A, accumulator_value);
+    let accumulator_value = state.memory[sp_plus_one as usize];
+    state.registers[Register::A] = accumulator_value;
     state.stack_pointer = sp_plus_two;
 }
 
 #[cfg_attr(test, mutate)]
 pub fn xthl_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
-    let low_memory_value = state.get_value_at_memory_location(state.stack_pointer);
-    let high_memory_value = state.get_value_at_memory_location(sp_plus_one);
-    let l_register_value = state.get_register_value(Register::L);
-    let h_register_value = state.get_register_value(Register::H);
-    state.set_register(Register::L, low_memory_value);
-    state.set_value_at_memory_location(state.stack_pointer, l_register_value);
-    state.set_register(Register::H, high_memory_value);
-    state.set_value_at_memory_location(sp_plus_one, h_register_value);
+    let low_memory_value = state.memory[state.stack_pointer as usize];
+    let high_memory_value = state.memory[sp_plus_one as usize];
+    let l_register_value = state.registers[Register::L];
+    let h_register_value = state.registers[Register::H];
+    state.registers[Register::L] = low_memory_value;
+    state.memory[state.stack_pointer as usize] = l_register_value;
+    state.registers[Register::H] = high_memory_value;
+    state.memory[sp_plus_one as usize] = h_register_value;
 }
 
 #[cfg_attr(test, mutate)]
