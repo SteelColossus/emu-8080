@@ -33,6 +33,9 @@ fn main() -> Result<(), String> {
         .expect("Must provide a filename argument for a game to play")
         .as_str();
 
+    // Based on audio file bitrate of 88kbps
+    mixer::open_audio(11_025, mixer::AUDIO_U8, 1, 1_024)?;
+
     let expected_extension = ".bin";
     let mut machine: Box<dyn Machine> = match file_name {
         "invaders.bin" => Box::new(machine::SpaceInvadersMachine::default()),
@@ -62,8 +65,6 @@ fn main() -> Result<(), String> {
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
-    // Based on audio file bitrate of 88kbps
-    mixer::open_audio(11_025, mixer::AUDIO_U8, 1, 1_024)?;
 
     let (screen_width, screen_height) = get_screen_dimensions(&*machine);
     let window = video_subsystem
