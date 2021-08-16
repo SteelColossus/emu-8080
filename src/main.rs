@@ -89,9 +89,10 @@ fn main() -> Result<(), String> {
 
     let mut timer = Instant::now();
     let mut current_screen_line: u32 = 0;
+    let mut is_paused = false;
 
     'running: loop {
-        if !machine.state().is_halted {
+        if !is_paused && !machine.state().is_halted {
             runner::run_next_operation(machine.state_mut());
         }
 
@@ -100,11 +101,13 @@ fn main() -> Result<(), String> {
         if duration > Duration::from_micros(1_000_000 / FRAME_RATE / u64::from(screen_height)) {
             timer = Instant::now();
             current_screen_line += 1;
-            generate_video_interrupts_if_needed(
-                machine.state_mut(),
-                current_screen_line,
-                screen_height,
-            );
+            if !is_paused {
+                generate_video_interrupts_if_needed(
+                    machine.state_mut(),
+                    current_screen_line,
+                    screen_height,
+                );
+            }
         }
 
         if current_screen_line >= screen_height {
@@ -119,7 +122,7 @@ fn main() -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
 
             render_next_frame(&mut canvas, &texture)?;
-            let should_quit = handle_events(&mut event_pump, &mut machine);
+            let should_quit = handle_events(&mut event_pump, &mut machine, &mut is_paused);
 
             if should_quit {
                 break 'running;
@@ -260,7 +263,11 @@ fn render_next_frame(canvas: &mut WindowCanvas, texture: &Texture) -> Result<(),
     Ok(())
 }
 
-fn handle_events(event_pump: &mut EventPump, machine: &mut Box<dyn Machine>) -> bool {
+fn handle_events(
+    event_pump: &mut EventPump,
+    machine: &mut Box<dyn Machine>,
+    is_paused: &mut bool,
+) -> bool {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -269,6 +276,12 @@ fn handle_events(event_pump: &mut EventPump, machine: &mut Box<dyn Machine>) -> 
                 ..
             } => {
                 return true;
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::P),
+                ..
+            } => {
+                *is_paused = !*is_paused;
             }
             Event::KeyDown {
                 keycode: Some(key), ..
