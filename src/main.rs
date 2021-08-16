@@ -49,7 +49,7 @@ fn main() -> Result<(), String> {
                     "lagunar" => 90,
                     _ => 0,
                 };
-                Box::new(machine::BlankMachine::with_name_and_orientation(
+                Box::new(machine::BlankMachine::from_name_and_orientation(
                     machine_name.to_string(),
                     orientation,
                 ))
@@ -61,14 +61,14 @@ fn main() -> Result<(), String> {
 
     let file_bytes = fs::read(file_name)
         .unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
-    machine.get_state_mut().load_memory(file_bytes);
+    machine.state_mut().load_memory(file_bytes);
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
-    let (screen_width, screen_height) = get_screen_dimensions(&*machine);
+    let (screen_width, screen_height) = screen_dimensions(&*machine);
     let window = video_subsystem
-        .window(machine.get_name(), screen_width * 4, screen_height * 4)
+        .window(machine.name(), screen_width * 4, screen_height * 4)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
@@ -91,7 +91,7 @@ fn main() -> Result<(), String> {
     let mut current_screen_line: u32 = 0;
 
     'running: loop {
-        runner::run_next_operation(&mut machine.get_state_mut());
+        runner::run_next_operation(machine.state_mut());
 
         let duration = timer.elapsed();
 
@@ -99,7 +99,7 @@ fn main() -> Result<(), String> {
             timer = Instant::now();
             current_screen_line += 1;
             generate_video_interrupts_if_needed(
-                &mut machine.get_state_mut(),
+                machine.state_mut(),
                 current_screen_line,
                 screen_height,
             );
@@ -107,7 +107,7 @@ fn main() -> Result<(), String> {
 
         if current_screen_line >= screen_height {
             current_screen_line = 0;
-            let screen_pixel_data = get_screen_pixel_data(&*machine);
+            let screen_pixel_data = screen_pixel_data(&*machine);
             texture
                 .update(
                     None,
@@ -123,18 +123,15 @@ fn main() -> Result<(), String> {
                 break 'running;
             }
 
-            machine.set_ports_based_on_inputs();
+            machine.set_ports_from_inputs();
         }
-
-        // Crude assumption of each instruction taking 2 cycles on a 2MHz processor for the time being
-        // std::thread::sleep(Duration::from_micros(1));
     }
 
     Ok(())
 }
 
-fn get_screen_dimensions(machine: &dyn Machine) -> (u32, u32) {
-    let screen_orientation = machine.get_orientation();
+fn screen_dimensions(machine: &dyn Machine) -> (u32, u32) {
+    let screen_orientation = machine.orientation();
     let is_screen_rotated = (screen_orientation % 360 / 90) % 2 == 1;
     let screen_width = if is_screen_rotated {
         ORIGINAL_SCREEN_HEIGHT
@@ -165,14 +162,14 @@ fn generate_video_interrupts_if_needed(state: &mut State, screen_line: u32, max_
     }
 }
 
-fn get_screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
+fn screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
     const VIDEO_MEMORY_START: u16 = 0x2400;
     let num_bytes_per_original_row: u32 = ORIGINAL_SCREEN_WIDTH / 8;
     let mut screen_pixel_data = [0b0000_0000; SCREEN_DATA_SIZE];
-    let state = machine.get_state();
+    let state = machine.state();
 
-    let (screen_width, screen_height) = get_screen_dimensions(machine);
-    let screen_orientation = machine.get_orientation();
+    let (screen_width, screen_height) = screen_dimensions(machine);
+    let screen_orientation = machine.orientation();
 
     for original_screen_row in 0..ORIGINAL_SCREEN_HEIGHT {
         for original_screen_column_byte in 0..num_bytes_per_original_row {
@@ -247,7 +244,7 @@ fn set_original_column_byte_pixels(
 }
 
 fn set_pixel(machine: &dyn Machine, pixel_slice: &mut [u8], x: u32, y: u32) {
-    let color = machine.get_pixel_color(x, y);
+    let color = machine.pixel_color(x, y);
     pixel_slice[0] = color.r;
     pixel_slice[1] = color.g;
     pixel_slice[2] = color.b;

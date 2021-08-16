@@ -10,7 +10,7 @@ pub fn add_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn add_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     adi_instruction(state, memory_value);
 }
@@ -31,7 +31,7 @@ pub fn adc_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn adc_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     aci_instruction(state, memory_value);
 }
@@ -60,7 +60,7 @@ pub fn sub_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn sub_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     sui_instruction(state, memory_value);
 }
@@ -81,7 +81,7 @@ pub fn sbb_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn sbb_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     sbi_instruction(state, memory_value);
 }
@@ -113,7 +113,7 @@ pub fn inr_instruction(state: &mut State, register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn inr_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     let new_memory_value = memory_value.wrapping_add(1);
     state.memory[memory_address as usize] = new_memory_value;
@@ -131,7 +131,7 @@ pub fn dcr_instruction(state: &mut State, register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn dcr_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     let new_memory_value = memory_value.wrapping_sub(1);
     state.memory[memory_address as usize] = new_memory_value;
@@ -142,24 +142,24 @@ pub fn dcr_mem_instruction(state: &mut State) {
 
 #[cfg_attr(test, mutate)]
 pub fn inx_instruction(state: &mut State, register_pair: RegisterPair) {
-    let mut value = register_pair.get_full_value(state);
+    let mut value = state.full_rp_value(register_pair);
     value = value.wrapping_add(1);
-    register_pair.set_full_value(state, value);
+    state.set_full_rp_value(register_pair, value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn dcx_instruction(state: &mut State, register_pair: RegisterPair) {
-    let mut value = register_pair.get_full_value(state);
+    let mut value = state.full_rp_value(register_pair);
     value = value.wrapping_sub(1);
-    register_pair.set_full_value(state, value);
+    state.set_full_rp_value(register_pair, value);
 }
 
 #[cfg_attr(test, mutate)]
 pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
-    let hl_value = RegisterPair::HL.get_full_value(state);
-    let register_pair_value = register_pair.get_full_value(state);
+    let hl_value = state.full_rp_value(RegisterPair::HL);
+    let register_pair_value = state.full_rp_value(register_pair);
     let (hl_value_after_addition, carry) = hl_value.overflowing_add(register_pair_value);
-    RegisterPair::HL.set_full_value(state, hl_value_after_addition);
+    state.set_full_rp_value(RegisterPair::HL, hl_value_after_addition);
     state.condition_flags[ConditionFlag::Carry] = carry;
 }
 

@@ -73,7 +73,7 @@ pub fn rst_instruction(state: &mut State, reset_index: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn pchl_instruction(state: &mut State) {
-    state.program_counter = RegisterPair::HL.get_full_value(&state);
+    state.program_counter = state.full_rp_value(RegisterPair::HL);
 }
 
 #[cfg(test)]

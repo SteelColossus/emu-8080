@@ -23,7 +23,7 @@ pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
 }
 
 #[cfg_attr(test, mutate)]
-pub fn get_parity(value: u8) -> bool {
+pub fn parity(value: u8) -> bool {
     let mut parity = true;
 
     for bit_index in 0..=7 {
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Invalid bit index of 8")]
-    fn get_value_with_bit_set_panics_when_given_an_invalid_bit_index() {
+    fn set_bit_in_value_panics_when_given_an_invalid_bit_index() {
         set_bit_in_value(&mut 127, 8, true);
     }
 

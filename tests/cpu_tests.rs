@@ -31,7 +31,7 @@ fn print_test_output(state: &State) {
             print!("{}", register_e as char);
         }
         9 => {
-            let mut memory_address = RegisterPair::DE.get_full_value(state);
+            let mut memory_address = state.full_rp_value(RegisterPair::DE);
             let mut memory_character: char;
 
             loop {

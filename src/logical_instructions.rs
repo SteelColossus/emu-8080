@@ -10,7 +10,7 @@ pub fn ana_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn ana_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     ani_instruction(state, memory_value);
 }
@@ -38,7 +38,7 @@ pub fn xra_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn xra_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     xri_instruction(state, memory_value);
 }
@@ -61,7 +61,7 @@ pub fn ora_instruction(state: &mut State, source_register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn ora_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     ori_instruction(state, memory_value);
 }
@@ -84,7 +84,7 @@ pub fn cmp_instruction(state: &mut State, register: Register) {
 
 #[cfg_attr(test, mutate)]
 pub fn cmp_mem_instruction(state: &mut State) {
-    let memory_address = RegisterPair::HL.get_full_value(state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     cpi_instruction(state, memory_value);
 }

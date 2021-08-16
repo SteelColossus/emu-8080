@@ -37,63 +37,6 @@ pub enum RegisterPair {
     SP,
 }
 
-impl RegisterPair {
-    #[cfg_attr(test, mutate)]
-    pub fn get_low_high_value(&self, state: &State) -> (u8, u8) {
-        match self {
-            RegisterPair::BC => (state.registers[Register::C], state.registers[Register::B]),
-            RegisterPair::DE => (state.registers[Register::E], state.registers[Register::D]),
-            RegisterPair::HL => (state.registers[Register::L], state.registers[Register::H]),
-            RegisterPair::SP => {
-                let (low_value, high_value) =
-                    bit_operations::split_to_low_high_bytes(state.stack_pointer);
-                (low_value, high_value)
-            }
-        }
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn get_full_value(&self, state: &State) -> u16 {
-        if self == &RegisterPair::SP {
-            return state.stack_pointer;
-        }
-
-        let (low_value, high_value) = self.get_low_high_value(state);
-        bit_operations::concat_low_high_bytes(low_value, high_value)
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn set_low_high_value(&self, state: &mut State, low_value: u8, high_value: u8) {
-        match self {
-            RegisterPair::BC => {
-                state.registers[Register::C] = low_value;
-                state.registers[Register::B] = high_value;
-            }
-            RegisterPair::DE => {
-                state.registers[Register::E] = low_value;
-                state.registers[Register::D] = high_value;
-            }
-            RegisterPair::HL => {
-                state.registers[Register::L] = low_value;
-                state.registers[Register::H] = high_value;
-            }
-            RegisterPair::SP => {
-                state.stack_pointer = bit_operations::concat_low_high_bytes(low_value, high_value)
-            }
-        };
-    }
-
-    #[cfg_attr(test, mutate)]
-    pub fn set_full_value(&self, state: &mut State, value: u16) {
-        if self == &RegisterPair::SP {
-            state.stack_pointer = value;
-        }
-
-        let (low_value, high_value) = bit_operations::split_to_low_high_bytes(value);
-        self.set_low_high_value(state, low_value, high_value);
-    }
-}
-
 #[derive(Copy, Clone, Enum, Eq, PartialEq, Hash, Debug)]
 pub enum ConditionFlag {
     Zero,
@@ -109,7 +52,7 @@ pub type Condition = (ConditionFlag, bool);
 pub trait Ports {
     fn read_in_port(&self, port_number: u8) -> u8;
     fn write_out_port(&mut self, port_number: u8, value: u8);
-    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8>;
+    fn in_port_static_value(&self, port_number: u8) -> Option<u8>;
     fn set_in_port_static_value(&mut self, port_number: u8, value: u8);
 }
 
@@ -120,7 +63,7 @@ impl Ports for DefaultPorts {
         0
     }
     fn write_out_port(&mut self, _port_number: u8, _value: u8) {}
-    fn get_in_port_static_value(&self, _port_number: u8) -> Option<u8> {
+    fn in_port_static_value(&self, _port_number: u8) -> Option<u8> {
         None
     }
     fn set_in_port_static_value(&mut self, _port_number: u8, _value: u8) {}
@@ -211,7 +154,7 @@ impl State {
     pub fn set_condition_flags_from_result(&mut self, result: u8) {
         self.condition_flags[ConditionFlag::Zero] = result == 0;
         self.condition_flags[ConditionFlag::Sign] = bit_operations::is_bit_set(result, 7);
-        self.condition_flags[ConditionFlag::Parity] = bit_operations::get_parity(result);
+        self.condition_flags[ConditionFlag::Parity] = bit_operations::parity(result);
     }
 
     #[cfg_attr(test, mutate)]
@@ -221,7 +164,7 @@ impl State {
     }
 
     #[cfg_attr(test, mutate)]
-    pub fn get_condition_flag_byte(&self) -> u8 {
+    pub fn condition_flag_byte(&self) -> u8 {
         let mut condition_flag_byte = 0b00000010;
         for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
             bit_operations::set_bit_in_value(
@@ -245,6 +188,66 @@ impl State {
     #[cfg_attr(test, mutate)]
     pub fn is_condition_true(&self, condition: Condition) -> bool {
         self.condition_flags[condition.0] == condition.1
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn low_high_rp_value(&self, register_pair: RegisterPair) -> (u8, u8) {
+        match register_pair {
+            RegisterPair::BC => (self.registers[Register::C], self.registers[Register::B]),
+            RegisterPair::DE => (self.registers[Register::E], self.registers[Register::D]),
+            RegisterPair::HL => (self.registers[Register::L], self.registers[Register::H]),
+            RegisterPair::SP => {
+                let (low_value, high_value) =
+                    bit_operations::split_to_low_high_bytes(self.stack_pointer);
+                (low_value, high_value)
+            }
+        }
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn full_rp_value(&self, register_pair: RegisterPair) -> u16 {
+        if register_pair == RegisterPair::SP {
+            return self.stack_pointer;
+        }
+
+        let (low_value, high_value) = self.low_high_rp_value(register_pair);
+        bit_operations::concat_low_high_bytes(low_value, high_value)
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_low_high_rp_value(
+        &mut self,
+        register_pair: RegisterPair,
+        low_value: u8,
+        high_value: u8,
+    ) {
+        match register_pair {
+            RegisterPair::BC => {
+                self.registers[Register::C] = low_value;
+                self.registers[Register::B] = high_value;
+            }
+            RegisterPair::DE => {
+                self.registers[Register::E] = low_value;
+                self.registers[Register::D] = high_value;
+            }
+            RegisterPair::HL => {
+                self.registers[Register::L] = low_value;
+                self.registers[Register::H] = high_value;
+            }
+            RegisterPair::SP => {
+                self.stack_pointer = bit_operations::concat_low_high_bytes(low_value, high_value)
+            }
+        };
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn set_full_rp_value(&mut self, register_pair: RegisterPair, value: u16) {
+        if register_pair == RegisterPair::SP {
+            self.stack_pointer = value;
+        }
+
+        let (low_value, high_value) = bit_operations::split_to_low_high_bytes(value);
+        self.set_low_high_rp_value(register_pair, low_value, high_value);
     }
 
     #[cfg_attr(test, mutate)]
@@ -277,12 +280,12 @@ impl State {
             ({:02X} {:02X} {:02X} {:02X})",
             op_code_pc,
             bit_operations::concat_low_high_bytes(
-                self.get_condition_flag_byte(),
+                self.condition_flag_byte(),
                 self.registers[Register::A]
             ),
-            RegisterPair::BC.get_full_value(self),
-            RegisterPair::DE.get_full_value(self),
-            RegisterPair::HL.get_full_value(self),
+            self.full_rp_value(RegisterPair::BC),
+            self.full_rp_value(RegisterPair::DE),
+            self.full_rp_value(RegisterPair::HL),
             self.stack_pointer,
             self.cpu_total_state_count,
             self.memory[op_code_pc as usize],
@@ -633,7 +636,7 @@ mod tests {
     #[test]
     fn stack_pointer_value_returned_by_register_pair_is_same_as_actual_value() {
         let state = StateBuilder::default().stack_pointer(0xF00F).build();
-        assert_eq!((0x0F, 0xF0), RegisterPair::SP.get_low_high_value(&state));
-        assert_eq!(state.stack_pointer, RegisterPair::SP.get_full_value(&state));
+        assert_eq!((0x0F, 0xF0), state.low_high_rp_value(RegisterPair::SP));
+        assert_eq!(state.stack_pointer, state.full_rp_value(RegisterPair::SP));
     }
 }

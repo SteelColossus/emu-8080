@@ -10,7 +10,7 @@ pub fn mov_instruction(state: &mut State, from_register: Register, to_register: 
 
 #[cfg_attr(test, mutate)]
 pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
-    let memory_address = RegisterPair::HL.get_full_value(&state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     let data = state.memory[memory_address as usize];
     mvi_instruction(state, register, data);
 }
@@ -28,7 +28,7 @@ pub fn mvi_instruction(state: &mut State, register: Register, data: u8) {
 
 #[cfg_attr(test, mutate)]
 pub fn mvi_mem_instruction(state: &mut State, data: u8) {
-    let memory_address = RegisterPair::HL.get_full_value(&state);
+    let memory_address = state.full_rp_value(RegisterPair::HL);
     state.memory[memory_address as usize] = data;
 }
 
@@ -39,7 +39,7 @@ pub fn lxi_instruction(
     low_data: u8,
     high_data: u8,
 ) {
-    register_pair.set_low_high_value(state, low_data, high_data);
+    state.set_low_high_rp_value(register_pair, low_data, high_data);
 }
 
 #[cfg_attr(test, mutate)]
@@ -85,7 +85,7 @@ pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
         );
     }
 
-    let memory_address = register_pair.get_full_value(&state);
+    let memory_address = state.full_rp_value(register_pair);
     let value = state.memory[memory_address as usize];
     state.registers[Register::A] = value;
 }
@@ -100,7 +100,7 @@ pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
     }
 
     let value = state.registers[Register::A];
-    let memory_address = register_pair.get_full_value(&state);
+    let memory_address = state.full_rp_value(register_pair);
     state.memory[memory_address as usize] = value;
 }
 

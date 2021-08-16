@@ -10,17 +10,17 @@ use sdl2::pixels::Color;
 use emu_8080::{bit_operations, Ports, State};
 
 pub trait Machine {
-    fn get_state(&self) -> &State;
-    fn get_state_mut(&mut self) -> &mut State;
+    fn state(&self) -> &State;
+    fn state_mut(&mut self) -> &mut State;
     fn set_input_from_key(&mut self, key: Keycode, key_down: bool);
-    fn set_ports_based_on_inputs(&mut self);
-    fn get_pixel_color(&self, _x: u32, _y: u32) -> Color {
+    fn set_ports_from_inputs(&mut self);
+    fn pixel_color(&self, _x: u32, _y: u32) -> Color {
         Color::WHITE
     }
-    fn get_orientation(&self) -> u32 {
+    fn orientation(&self) -> u32 {
         0
     }
-    fn get_name(&self) -> &str;
+    fn name(&self) -> &str;
 }
 
 pub struct BlankMachine {
@@ -30,7 +30,7 @@ pub struct BlankMachine {
 }
 
 impl BlankMachine {
-    pub fn with_name_and_orientation(machine_name: String, orientation: u32) -> Self {
+    pub fn from_name_and_orientation(machine_name: String, orientation: u32) -> Self {
         BlankMachine {
             state: State::default(),
             machine_name,
@@ -40,23 +40,18 @@ impl BlankMachine {
 }
 
 impl Machine for BlankMachine {
-    fn get_state(&self) -> &State {
+    fn state(&self) -> &State {
         &self.state
     }
-
-    fn get_state_mut(&mut self) -> &mut State {
+    fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }
-
     fn set_input_from_key(&mut self, _key: Keycode, _key_down: bool) {}
-
-    fn set_ports_based_on_inputs(&mut self) {}
-
-    fn get_orientation(&self) -> u32 {
+    fn set_ports_from_inputs(&mut self) {}
+    fn orientation(&self) -> u32 {
         self.orientation
     }
-
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.machine_name
     }
 }
@@ -72,7 +67,7 @@ impl Default for SpaceInvadersMachine {
         SpaceInvadersMachine {
             state: {
                 let mut state = State::default();
-                let ports = SpaceInvadersPorts::with_sound_map(hashmap! {
+                let ports = SpaceInvadersPorts::from_sound_map(hashmap! {
                     SoundName::Shoot => AUDIO_FOLDER_PATH.to_owned() + "shoot.wav",
                     SoundName::PlayerKilled => AUDIO_FOLDER_PATH.to_owned() + "explosion.wav",
                     SoundName::InvaderKilled => AUDIO_FOLDER_PATH.to_owned() + "invaderkilled.wav",
@@ -95,11 +90,11 @@ impl Default for SpaceInvadersMachine {
 const AUDIO_FOLDER_PATH: &str = "audio/";
 
 impl Machine for SpaceInvadersMachine {
-    fn get_state(&self) -> &State {
+    fn state(&self) -> &State {
         &self.state
     }
 
-    fn get_state_mut(&mut self) -> &mut State {
+    fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }
 
@@ -125,7 +120,7 @@ impl Machine for SpaceInvadersMachine {
         }
     }
 
-    fn set_ports_based_on_inputs(&mut self) {
+    fn set_ports_from_inputs(&mut self) {
         set_in_port_from_flags(
             &mut self.state.ports,
             0,
@@ -165,7 +160,7 @@ impl Machine for SpaceInvadersMachine {
         );
     }
 
-    fn get_pixel_color(&self, x: u32, y: u32) -> Color {
+    fn pixel_color(&self, x: u32, y: u32) -> Color {
         // From https://tcrf.net/File:SpaceInvadersArcColorUseTV.png
         if (32..64).contains(&y) {
             Color::RED
@@ -176,11 +171,11 @@ impl Machine for SpaceInvadersMachine {
         }
     }
 
-    fn get_orientation(&self) -> u32 {
+    fn orientation(&self) -> u32 {
         270
     }
 
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         "Space Invaders"
     }
 }
@@ -226,7 +221,7 @@ impl Default for SpaceInvadersPorts {
     }
 }
 
-fn get_shifted_value(shift_data: u16, shift_amount: u8) -> u8 {
+fn shift_value(shift_data: u16, shift_amount: u8) -> u8 {
     ((shift_data & (0b_1111_1111_0000_0000 >> shift_amount as u16)) >> (8 - shift_amount)) as u8
 }
 
@@ -240,7 +235,7 @@ fn set_in_port_from_flags(
     port_number: u8,
     bit_index_to_flag_map: HashMap<u8, bool>,
 ) {
-    let mut port = ports.get_in_port_static_value(port_number).unwrap();
+    let mut port = ports.in_port_static_value(port_number).unwrap();
     for (bit_index, flag) in bit_index_to_flag_map {
         bit_operations::set_bit_in_value(&mut port, bit_index, flag);
     }
@@ -250,8 +245,8 @@ fn set_in_port_from_flags(
 impl Ports for SpaceInvadersPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
-            0 | 1 | 2 => self.get_in_port_static_value(port_number).unwrap(),
-            3 => get_shifted_value(self.shift_data, self.shift_amount),
+            0 | 1 | 2 => self.in_port_static_value(port_number).unwrap(),
+            3 => shift_value(self.shift_data, self.shift_amount),
             _ => panic!("Invalid input Port {}", port_number),
         }
     }
@@ -295,7 +290,7 @@ impl Ports for SpaceInvadersPorts {
         };
     }
 
-    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8> {
+    fn in_port_static_value(&self, port_number: u8) -> Option<u8> {
         match port_number {
             0 => Some(self.in_port_0),
             1 => Some(self.in_port_1),
@@ -315,7 +310,7 @@ impl Ports for SpaceInvadersPorts {
 }
 
 impl SpaceInvadersPorts {
-    fn with_sound_map(sound_map: HashMap<SoundName, String>) -> Self {
+    fn from_sound_map(sound_map: HashMap<SoundName, String>) -> Self {
         let mut ports = SpaceInvadersPorts::default();
 
         for (sound_name, file_path) in sound_map {
@@ -380,7 +375,7 @@ pub struct BootHillMachine {
 }
 
 impl BootHillMachine {
-    fn get_gun_state(&self, is_player_two: bool) -> u8 {
+    fn gun_state(&self, is_player_two: bool) -> u8 {
         let (gun_up, gun_middle, gun_down) = if is_player_two {
             (
                 self.inputs.p2_gun_up,
@@ -425,11 +420,11 @@ impl Default for BootHillMachine {
 }
 
 impl Machine for BootHillMachine {
-    fn get_state(&self) -> &State {
+    fn state(&self) -> &State {
         &self.state
     }
 
-    fn get_state_mut(&mut self) -> &mut State {
+    fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }
 
@@ -458,8 +453,8 @@ impl Machine for BootHillMachine {
         };
     }
 
-    fn set_ports_based_on_inputs(&mut self) {
-        let p2_gun_state = self.get_gun_state(true);
+    fn set_ports_from_inputs(&mut self) {
+        let p2_gun_state = self.gun_state(true);
 
         set_in_port_from_flags(
             &mut self.state.ports,
@@ -476,7 +471,7 @@ impl Machine for BootHillMachine {
             },
         );
 
-        let p1_gun_state = self.get_gun_state(false);
+        let p1_gun_state = self.gun_state(false);
 
         set_in_port_from_flags(
             &mut self.state.ports,
@@ -509,7 +504,7 @@ impl Machine for BootHillMachine {
         );
     }
 
-    fn get_name(&self) -> &str {
+    fn name(&self) -> &str {
         "Boot Hill"
     }
 }
@@ -541,9 +536,9 @@ impl Default for BootHillPorts {
 impl Ports for BootHillPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
-            0 | 1 | 2 => self.get_in_port_static_value(port_number).unwrap(),
+            0 | 1 | 2 => self.in_port_static_value(port_number).unwrap(),
             3 => {
-                let shifted_value = get_shifted_value(self.shift_data, self.shift_amount);
+                let shifted_value = shift_value(self.shift_data, self.shift_amount);
                 if self.shift_reverse {
                     bit_operations::reverse_byte(shifted_value)
                 } else {
@@ -572,7 +567,7 @@ impl Ports for BootHillPorts {
         }
     }
 
-    fn get_in_port_static_value(&self, port_number: u8) -> Option<u8> {
+    fn in_port_static_value(&self, port_number: u8) -> Option<u8> {
         match port_number {
             0 => Some(self.in_port_0),
             1 => Some(self.in_port_1),

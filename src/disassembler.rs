@@ -261,7 +261,7 @@ mod tests {
     use crate::Condition;
     use std::collections::HashMap;
 
-    fn get_register_from_bit_pattern(bit_pattern: u8) -> Register {
+    fn register_from_bit_pattern(bit_pattern: u8) -> Register {
         match bit_pattern {
             0b000 => Register::B,
             0b001 => Register::C,
@@ -274,7 +274,7 @@ mod tests {
         }
     }
 
-    fn get_condition_from_bit_pattern(bit_pattern: u8) -> Condition {
+    fn condition_from_bit_pattern(bit_pattern: u8) -> Condition {
         match bit_pattern {
             0b000 => (ConditionFlag::Zero, false),
             0b001 => (ConditionFlag::Zero, true),
@@ -288,7 +288,7 @@ mod tests {
         }
     }
 
-    fn get_register_pair_from_bit_pattern(bit_pattern: u8) -> RegisterPair {
+    fn register_pair_from_bit_pattern(bit_pattern: u8) -> RegisterPair {
         match bit_pattern {
             0b00 => RegisterPair::BC,
             0b01 => RegisterPair::DE,
@@ -309,7 +309,7 @@ mod tests {
         );
     }
 
-    fn get_all_combinations_for_op_codes<F, T>(
+    fn all_combinations_for_op_codes<F, T>(
         base_op_code: u8,
         lowest_bit_offset: u8,
         bit_patterns: Vec<u8>,
@@ -329,55 +329,51 @@ mod tests {
         combination_map
     }
 
-    fn get_all_registers_for_op_codes(
+    fn all_registers_for_op_codes(
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, Register> {
         let bit_patterns = vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b111];
-        get_all_combinations_for_op_codes(
+        all_combinations_for_op_codes(
             base_op_code,
             lowest_bit_offset,
             bit_patterns,
-            get_register_from_bit_pattern,
+            register_from_bit_pattern,
         )
     }
 
-    fn get_all_conditions_for_op_codes(
+    fn all_conditions_for_op_codes(
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, Condition> {
         let bit_patterns = vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111];
-        get_all_combinations_for_op_codes(
+        all_combinations_for_op_codes(
             base_op_code,
             lowest_bit_offset,
             bit_patterns,
-            get_condition_from_bit_pattern,
+            condition_from_bit_pattern,
         )
     }
 
-    fn get_all_register_pairs_for_op_codes(
+    fn all_register_pairs_for_op_codes(
         base_op_code: u8,
         lowest_bit_offset: u8,
     ) -> HashMap<u8, RegisterPair> {
-        get_all_register_pairs_for_op_codes_with_exclusions(
-            base_op_code,
-            lowest_bit_offset,
-            Vec::new(),
-        )
+        all_register_pairs_for_op_codes_with_exclusions(base_op_code, lowest_bit_offset, Vec::new())
     }
 
-    fn get_all_register_pairs_for_op_codes_with_exclusions(
+    fn all_register_pairs_for_op_codes_with_exclusions(
         base_op_code: u8,
         lowest_bit_offset: u8,
         exclusions: Vec<u8>,
     ) -> HashMap<u8, RegisterPair> {
         let mut bit_patterns = vec![0b00, 0b01, 0b10, 0b11];
         bit_patterns.retain(|bp| !exclusions.contains(bp));
-        get_all_combinations_for_op_codes(
+        all_combinations_for_op_codes(
             base_op_code,
             lowest_bit_offset,
             bit_patterns,
-            get_register_pair_from_bit_pattern,
+            register_pair_from_bit_pattern,
         )
     }
 
@@ -389,10 +385,10 @@ mod tests {
 
     #[test]
     fn disassembler_handles_mov() {
-        let source_register_map = get_all_registers_for_op_codes(0b01_000_000, 0);
+        let source_register_map = all_registers_for_op_codes(0b01_000_000, 0);
 
         for (interim_op_code, source_register) in source_register_map {
-            let destination_register_map = get_all_registers_for_op_codes(interim_op_code, 3);
+            let destination_register_map = all_registers_for_op_codes(interim_op_code, 3);
 
             for (op_code, destination_register) in destination_register_map {
                 let operation = disassemble_op_code(op_code);
@@ -406,7 +402,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_mov_from_mem() {
-        let register_map = get_all_registers_for_op_codes(0b01_000_110, 3);
+        let register_map = all_registers_for_op_codes(0b01_000_110, 3);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -416,7 +412,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_mov_to_mem() {
-        let register_map = get_all_registers_for_op_codes(0b01_110_000, 0);
+        let register_map = all_registers_for_op_codes(0b01_110_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -426,7 +422,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_mvi() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_110, 3);
+        let register_map = all_registers_for_op_codes(0b00_000_110, 3);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -442,7 +438,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_lxi() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_001, 4);
+        let register_pair_map = all_register_pairs_for_op_codes(0b00_000_001, 4);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -477,7 +473,7 @@ mod tests {
     #[test]
     fn disassembler_handles_ldax() {
         let register_pair_map =
-            get_all_register_pairs_for_op_codes_with_exclusions(0b00_001_010, 4, vec![0b10, 0b11]);
+            all_register_pairs_for_op_codes_with_exclusions(0b00_001_010, 4, vec![0b10, 0b11]);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -488,7 +484,7 @@ mod tests {
     #[test]
     fn disassembler_handles_stax() {
         let register_pair_map =
-            get_all_register_pairs_for_op_codes_with_exclusions(0b00_000_010, 4, vec![0b10, 0b11]);
+            all_register_pairs_for_op_codes_with_exclusions(0b00_000_010, 4, vec![0b10, 0b11]);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -504,7 +500,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_add() {
-        let register_map = get_all_registers_for_op_codes(0b10_000_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_000_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -526,7 +522,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_adc() {
-        let register_map = get_all_registers_for_op_codes(0b10_001_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_001_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -548,7 +544,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_sub() {
-        let register_map = get_all_registers_for_op_codes(0b10_010_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_010_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -570,7 +566,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_sbb() {
-        let register_map = get_all_registers_for_op_codes(0b10_011_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_011_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -592,7 +588,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_inr() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_100, 3);
+        let register_map = all_registers_for_op_codes(0b00_000_100, 3);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -608,7 +604,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_dcr() {
-        let register_map = get_all_registers_for_op_codes(0b00_000_101, 3);
+        let register_map = all_registers_for_op_codes(0b00_000_101, 3);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -624,7 +620,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_inx() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_000_011, 4);
+        let register_pair_map = all_register_pairs_for_op_codes(0b00_000_011, 4);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -634,7 +630,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_dcx() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_011, 4);
+        let register_pair_map = all_register_pairs_for_op_codes(0b00_001_011, 4);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -644,7 +640,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_dad() {
-        let register_pair_map = get_all_register_pairs_for_op_codes(0b00_001_001, 4);
+        let register_pair_map = all_register_pairs_for_op_codes(0b00_001_001, 4);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -660,7 +656,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_ana() {
-        let register_map = get_all_registers_for_op_codes(0b10_100_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_100_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -682,7 +678,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_xra() {
-        let register_map = get_all_registers_for_op_codes(0b10_101_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_101_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -704,7 +700,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_ora() {
-        let register_map = get_all_registers_for_op_codes(0b10_110_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_110_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -726,7 +722,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_cmp() {
-        let register_map = get_all_registers_for_op_codes(0b10_111_000, 0);
+        let register_map = all_registers_for_op_codes(0b10_111_000, 0);
 
         for (op_code, register) in register_map {
             let operation = disassemble_op_code(op_code);
@@ -796,7 +792,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_jcond() {
-        let condition_map = get_all_conditions_for_op_codes(0b11_000_010, 3);
+        let condition_map = all_conditions_for_op_codes(0b11_000_010, 3);
 
         for (op_code, condition) in condition_map {
             let operation = disassemble_op_code(op_code);
@@ -812,7 +808,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_ccond() {
-        let condition_map = get_all_conditions_for_op_codes(0b11_000_100, 3);
+        let condition_map = all_conditions_for_op_codes(0b11_000_100, 3);
 
         for (op_code, condition) in condition_map {
             let operation = disassemble_op_code(op_code);
@@ -828,7 +824,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_rcond() {
-        let condition_map = get_all_conditions_for_op_codes(0b11_000_000, 3);
+        let condition_map = all_conditions_for_op_codes(0b11_000_000, 3);
 
         for (op_code, condition) in condition_map {
             let operation = disassemble_op_code(op_code);
@@ -838,7 +834,7 @@ mod tests {
 
     #[test]
     fn disassembler_handles_rst() {
-        let reset_index_map = get_all_combinations_for_op_codes(
+        let reset_index_map = all_combinations_for_op_codes(
             0b11_000_111,
             3,
             vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111],
@@ -860,7 +856,7 @@ mod tests {
     #[test]
     fn disassembler_handles_push() {
         let register_pair_map =
-            get_all_register_pairs_for_op_codes_with_exclusions(0b11_000_101, 4, vec![0b11]);
+            all_register_pairs_for_op_codes_with_exclusions(0b11_000_101, 4, vec![0b11]);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);
@@ -877,7 +873,7 @@ mod tests {
     #[test]
     fn disassembler_handles_pop() {
         let register_pair_map =
-            get_all_register_pairs_for_op_codes_with_exclusions(0b11_000_001, 4, vec![0b11]);
+            all_register_pairs_for_op_codes_with_exclusions(0b11_000_001, 4, vec![0b11]);
 
         for (op_code, register_pair) in register_pair_map {
             let operation = disassemble_op_code(op_code);

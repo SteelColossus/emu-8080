@@ -13,7 +13,7 @@ pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
 
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
-    let (register_pair_low, register_pair_high) = register_pair.get_low_high_value(state);
+    let (register_pair_low, register_pair_high) = state.low_high_rp_value(register_pair);
     state.memory[sp_minus_one as usize] = register_pair_high;
     state.memory[sp_minus_two as usize] = register_pair_low;
     state.stack_pointer = sp_minus_two;
@@ -25,7 +25,7 @@ pub fn push_psw_instruction(state: &mut State) {
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
     let accumulator_value = state.registers[Register::A];
     state.memory[sp_minus_one as usize] = accumulator_value;
-    let condition_flag_byte = state.get_condition_flag_byte();
+    let condition_flag_byte = state.condition_flag_byte();
     state.memory[sp_minus_two as usize] = condition_flag_byte;
     state.stack_pointer = sp_minus_two;
 }
@@ -43,8 +43,8 @@ pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
     let value_for_register_pair_low = state.memory[state.stack_pointer as usize];
     let value_for_register_pair_high = state.memory[sp_plus_one as usize];
-    register_pair.set_low_high_value(
-        state,
+    state.set_low_high_rp_value(
+        register_pair,
         value_for_register_pair_low,
         value_for_register_pair_high,
     );
@@ -76,7 +76,7 @@ pub fn xthl_instruction(state: &mut State) {
 
 #[cfg_attr(test, mutate)]
 pub fn sphl_instruction(state: &mut State) {
-    state.stack_pointer = RegisterPair::HL.get_full_value(&state);
+    state.stack_pointer = state.full_rp_value(RegisterPair::HL);
 }
 
 #[cfg_attr(test, mutate)]
