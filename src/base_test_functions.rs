@@ -84,12 +84,22 @@ fn assert_interrupts_enabled_state(state: &State, expected_interrupts_are_enable
     );
 }
 
+fn assert_halted_state(state: &State, expected_is_halted: bool) {
+    let actual_is_halted = state.is_halted;
+    assert_eq!(
+        actual_is_halted, expected_is_halted,
+        "Expected halted value to be {}, but instead it was {}",
+        actual_is_halted, expected_is_halted
+    );
+}
+
 pub fn assert_state_is_as_expected(actual_state: &State, expected_state: &State) {
     assert_values_of_registers(actual_state, &expected_state.registers);
     assert_values_of_condition_flags(actual_state, &expected_state.condition_flags);
     assert_program_counter_has_value(actual_state, expected_state.program_counter);
     assert_stack_pointer_has_value(actual_state, expected_state.stack_pointer);
     assert_interrupts_enabled_state(actual_state, expected_state.are_interrupts_enabled);
+    assert_halted_state(actual_state, expected_state.is_halted);
     for memory_address in 0..MEMORY_SIZE {
         let expected_value = expected_state.memory[memory_address];
         assert_memory_location_contains_value(actual_state, memory_address as u16, expected_value);

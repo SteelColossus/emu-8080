@@ -91,7 +91,9 @@ fn main() -> Result<(), String> {
     let mut current_screen_line: u32 = 0;
 
     'running: loop {
-        runner::run_next_operation(machine.state_mut());
+        if !machine.state().is_halted {
+            runner::run_next_operation(machine.state_mut());
+        }
 
         let duration = timer.elapsed();
 
@@ -148,6 +150,7 @@ fn screen_dimensions(machine: &dyn Machine) -> (u32, u32) {
 
 fn raise_interrupt(state: &mut State, reset_index: u8) {
     if state.are_interrupts_enabled {
+        state.is_halted = false;
         debug!("-- Raised interrupt with reset index of {} --", reset_index);
         emu_8080::branch_instructions::rst_instruction(state, reset_index);
     }

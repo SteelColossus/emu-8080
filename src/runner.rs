@@ -123,7 +123,7 @@ pub fn run_operation(
             .write_out_port(low_data(), state.registers[Register::A]),
         Operation::Ei => stack_instructions::ei_instruction(state),
         Operation::Di => stack_instructions::di_instruction(state),
-        Operation::Hlt => todo!(),
+        Operation::Hlt => stack_instructions::hlt_instruction(state),
         Operation::Nop => (),
     };
 

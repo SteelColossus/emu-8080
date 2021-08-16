@@ -89,6 +89,11 @@ pub fn di_instruction(state: &mut State) {
     state.are_interrupts_enabled = false;
 }
 
+#[cfg_attr(test, mutate)]
+pub fn hlt_instruction(state: &mut State) {
+    state.is_halted = true;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,14 +249,22 @@ mod tests {
         ei_instruction(&mut state);
         assert_state_is_as_expected(
             &state,
-            &StateBuilder::default().are_interrupts_enabled(true).build(),
+            &StateBuilder::default().interrupts_enabled(true).build(),
         )
     }
 
     #[test]
     fn di_sets_interrupts_as_disabled() {
-        let mut state = StateBuilder::default().are_interrupts_enabled(true).build();
+        let mut state = StateBuilder::default().interrupts_enabled(true).build();
         di_instruction(&mut state);
         assert_state_is_as_expected(&state, &State::default())
+    }
+
+    #[test]
+    fn hlt_halts_the_processor() {
+        let mut state = State::default();
+        assert_state_is_as_expected(&state, &StateBuilder::default().halted(false).build());
+        hlt_instruction(&mut state);
+        assert_state_is_as_expected(&state, &StateBuilder::default().halted(true).build());
     }
 }

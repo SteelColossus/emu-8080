@@ -86,6 +86,7 @@ pub struct State {
     pub stack_pointer: u16,
     pub memory: [u8; MEMORY_SIZE],
     pub are_interrupts_enabled: bool,
+    pub is_halted: bool,
     pub ports: Box<dyn Ports>,
     cpu_total_state_count: usize,
 }
@@ -312,6 +313,7 @@ pub struct StateBuilder {
     stack_pointer: Option<u16>,
     memory_values: Option<HashMap<u16, u8>>,
     are_interrupts_enabled: Option<bool>,
+    is_halted: Option<bool>,
 }
 
 impl StateBuilder {
@@ -353,9 +355,17 @@ impl StateBuilder {
         new
     }
 
-    pub fn are_interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
+    #[cfg_attr(test, mutate)]
+    pub fn interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
         let mut new = self;
         new.are_interrupts_enabled = Some(are_interrupts_enabled);
+        new
+    }
+
+    #[cfg_attr(test, mutate)]
+    pub fn halted(&mut self, is_halted: bool) -> &mut Self {
+        let mut new = self;
+        new.is_halted = Some(is_halted);
         new
     }
 
@@ -390,6 +400,7 @@ impl StateBuilder {
             stack_pointer: self.stack_pointer.unwrap_or(0x0000),
             memory,
             are_interrupts_enabled: self.are_interrupts_enabled.unwrap_or(false),
+            is_halted: self.is_halted.unwrap_or(false),
             ports: Box::new(DefaultPorts),
             cpu_total_state_count: 0,
         }
