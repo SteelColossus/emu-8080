@@ -61,7 +61,7 @@ fn main() -> Result<(), String> {
 
     let file_bytes = fs::read(file_name)
         .unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
-    machine.state_mut().load_memory(file_bytes);
+    machine.state_mut().load_memory(&*file_bytes);
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -95,7 +95,7 @@ fn main() -> Result<(), String> {
 
         let duration = timer.elapsed();
 
-        if duration > Duration::from_micros(1_000_000 / FRAME_RATE / screen_height as u64) {
+        if duration > Duration::from_micros(1_000_000 / FRAME_RATE / u64::from(screen_height)) {
             timer = Instant::now();
             current_screen_line += 1;
             generate_video_interrupts_if_needed(
@@ -188,7 +188,7 @@ fn screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
                     original_screen_column_byte,
                     original_screen_row,
                     memory_value,
-                )
+                );
             }
         }
     }
@@ -212,7 +212,7 @@ fn set_original_column_byte_pixels(
         let is_bit_set = emu_8080::bit_operations::is_bit_set(memory_value, bit_index);
 
         if is_bit_set {
-            let original_screen_column = original_screen_column_byte * 8 + bit_index as u32;
+            let original_screen_column = original_screen_column_byte * 8 + u32::from(bit_index);
 
             let (x, y) = match num_screen_turns {
                 0 => (original_screen_column, original_screen_row),

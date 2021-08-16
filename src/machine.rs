@@ -222,7 +222,7 @@ impl Default for SpaceInvadersPorts {
 }
 
 fn shift_value(shift_data: u16, shift_amount: u8) -> u8 {
-    ((shift_data & (0b_1111_1111_0000_0000 >> shift_amount as u16)) >> (8 - shift_amount)) as u8
+    ((shift_data & (0b_1111_1111_0000_0000 >> u16::from(shift_amount))) >> (8 - shift_amount)) as u8
 }
 
 fn shift_new_value_into_data(shift_data: u16, value: u8) -> u16 {
@@ -341,7 +341,7 @@ impl SpaceInvadersPorts {
         let sound_chunk_result = self.sound_map.get(sound_name);
 
         if let Some(sound_chunk) = sound_chunk_result {
-            let _ = Channel::all().play(&sound_chunk, 0);
+            let _sound_result = Channel::all().play(sound_chunk, 0);
         }
     }
 }

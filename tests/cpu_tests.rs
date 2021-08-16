@@ -8,7 +8,7 @@ fn run_next_operation(state: &mut State) -> bool {
     let operation = disassembler::disassemble_op_code(memory_value);
     let is_out_operation = operation == Operation::Out;
 
-    state.run_operation(operation);
+    state.run_operation(&operation);
 
     if is_out_operation {
         let port_number = state.memory[(state.program_counter - 1) as usize];
@@ -67,7 +67,7 @@ fn read_test_file(test_filename: &str) -> State {
     }
 
     let mut state = StateBuilder::default().program_counter(pc_start).build();
-    state.load_memory(file_bytes);
+    state.load_memory(&*file_bytes);
     state
 }
 

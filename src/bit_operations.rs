@@ -8,7 +8,7 @@ pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
     }
 
     let shifted_value = value >> bit_index;
-    shifted_value & 0b00000001 != 0
+    shifted_value & 0b0000_0001 != 0
 }
 
 #[cfg_attr(test, mutate)]
@@ -18,7 +18,7 @@ pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
     }
 
     let bit_mask = 1 << bit_index;
-    let bit_value_mask = if bit_flag { bit_mask } else { 0b00000000 };
+    let bit_value_mask = if bit_flag { bit_mask } else { 0b0000_0000 };
     *value = *value & !bit_mask | bit_value_mask;
 }
 
@@ -28,7 +28,7 @@ pub fn parity(value: u8) -> bool {
 
     for bit_index in 0..=7 {
         if is_bit_set(value, bit_index) {
-            parity = !parity
+            parity = !parity;
         }
     }
 

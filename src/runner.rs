@@ -24,30 +24,30 @@ pub fn run_operation(
 
     match operation {
         Operation::Mov(source_register, destination_register) => {
-            transfer_instructions::mov_instruction(state, *source_register, *destination_register)
+            transfer_instructions::mov_instruction(state, *source_register, *destination_register);
         }
         Operation::MovToMem(register) => {
-            transfer_instructions::mov_to_mem_instruction(state, *register)
+            transfer_instructions::mov_to_mem_instruction(state, *register);
         }
         Operation::MovFromMem(register) => {
-            transfer_instructions::mov_from_mem_instruction(state, *register)
+            transfer_instructions::mov_from_mem_instruction(state, *register);
         }
         Operation::Mvi(register) => {
-            transfer_instructions::mvi_instruction(state, *register, low_data())
+            transfer_instructions::mvi_instruction(state, *register, low_data());
         }
         Operation::MviMem => transfer_instructions::mvi_mem_instruction(state, low_data()),
         Operation::Lxi(register_pair) => {
-            transfer_instructions::lxi_instruction(state, *register_pair, low_data(), high_data())
+            transfer_instructions::lxi_instruction(state, *register_pair, low_data(), high_data());
         }
         Operation::Lda => transfer_instructions::lda_instruction(state, low_data(), high_data()),
         Operation::Sta => transfer_instructions::sta_instruction(state, low_data(), high_data()),
         Operation::Lhld => transfer_instructions::lhld_instruction(state, low_data(), high_data()),
         Operation::Shld => transfer_instructions::shld_instruction(state, low_data(), high_data()),
         Operation::Ldax(register_pair) => {
-            transfer_instructions::ldax_instruction(state, *register_pair)
+            transfer_instructions::ldax_instruction(state, *register_pair);
         }
         Operation::Stax(register_pair) => {
-            transfer_instructions::stax_instruction(state, *register_pair)
+            transfer_instructions::stax_instruction(state, *register_pair);
         }
         Operation::Xchg => transfer_instructions::xchg_instruction(state),
         Operation::Add(register) => arithmetic_instructions::add_instruction(state, *register),
@@ -67,13 +67,13 @@ pub fn run_operation(
         Operation::Dcr(register) => arithmetic_instructions::dcr_instruction(state, *register),
         Operation::DcrMem => arithmetic_instructions::dcr_mem_instruction(state),
         Operation::Inx(register_pair) => {
-            arithmetic_instructions::inx_instruction(state, *register_pair)
+            arithmetic_instructions::inx_instruction(state, *register_pair);
         }
         Operation::Dcx(register_pair) => {
-            arithmetic_instructions::dcx_instruction(state, *register_pair)
+            arithmetic_instructions::dcx_instruction(state, *register_pair);
         }
         Operation::Dad(register_pair) => {
-            arithmetic_instructions::dad_instruction(state, *register_pair)
+            arithmetic_instructions::dad_instruction(state, *register_pair);
         }
         Operation::Daa => arithmetic_instructions::daa_instruction(state),
         Operation::Ana(register) => logical_instructions::ana_instruction(state, *register),
@@ -97,18 +97,18 @@ pub fn run_operation(
         Operation::Stc => logical_instructions::stc_instruction(state),
         Operation::Jmp => branch_instructions::jmp_instruction(state, low_data(), high_data()),
         Operation::Jcond(condition) => {
-            branch_instructions::jcond_instruction(state, low_data(), high_data(), *condition)
+            branch_instructions::jcond_instruction(state, low_data(), high_data(), *condition);
         }
         Operation::Call => branch_instructions::call_instruction(state, low_data(), high_data()),
         Operation::Ccond(condition) => {
-            branch_instructions::ccond_instruction(state, low_data(), high_data(), *condition)
+            branch_instructions::ccond_instruction(state, low_data(), high_data(), *condition);
         }
         Operation::Ret => branch_instructions::ret_instruction(state),
         Operation::Rcond(condition) => branch_instructions::rcond_instruction(state, *condition),
         Operation::Rst(reset_index) => branch_instructions::rst_instruction(state, *reset_index),
         Operation::Pchl => branch_instructions::pchl_instruction(state),
         Operation::Push(register_pair) => {
-            stack_instructions::push_instruction(state, *register_pair)
+            stack_instructions::push_instruction(state, *register_pair);
         }
         Operation::Pop(register_pair) => stack_instructions::pop_instruction(state, *register_pair),
         Operation::PushPsw => stack_instructions::push_psw_instruction(state),
@@ -139,5 +139,5 @@ pub fn run_operation(
 pub fn run_next_operation(state: &mut State) {
     let memory_value = state.memory_value_at_pc();
     let operation = crate::disassembler::disassemble_op_code(memory_value);
-    state.run_operation(operation);
+    state.run_operation(&operation);
 }

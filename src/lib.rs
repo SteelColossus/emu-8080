@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use enum_map::{Enum, EnumMap};
-use log::debug;
+use log::{debug, log_enabled, Level};
 #[cfg(test)]
 use mutagen::mutate;
 
@@ -98,7 +98,7 @@ impl Default for State {
 }
 
 impl State {
-    pub fn load_memory(&mut self, contiguous_memory_bytes: Vec<u8>) {
+    pub fn load_memory(&mut self, contiguous_memory_bytes: &[u8]) {
         for (memory_address, memory_value) in contiguous_memory_bytes.iter().enumerate() {
             self.memory[memory_address] = *memory_value;
         }
@@ -165,7 +165,7 @@ impl State {
 
     #[cfg_attr(test, mutate)]
     pub fn condition_flag_byte(&self) -> u8 {
-        let mut condition_flag_byte = 0b00000010;
+        let mut condition_flag_byte = 0b0000_0010;
         for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
             bit_operations::set_bit_in_value(
                 &mut condition_flag_byte,
@@ -235,7 +235,7 @@ impl State {
                 self.registers[Register::H] = high_value;
             }
             RegisterPair::SP => {
-                self.stack_pointer = bit_operations::concat_low_high_bytes(low_value, high_value)
+                self.stack_pointer = bit_operations::concat_low_high_bytes(low_value, high_value);
             }
         };
     }
@@ -255,7 +255,7 @@ impl State {
         self.cpu_total_state_count
     }
 
-    pub fn run_operation(&mut self, operation: Operation) {
+    pub fn run_operation(&mut self, operation: &Operation) {
         let op_code_pc = self.program_counter;
         self.program_counter += 1;
 
@@ -275,27 +275,32 @@ impl State {
             self.program_counter += 1;
         }
 
-        debug!(
-            "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}\t\
-            ({:02X} {:02X} {:02X} {:02X})",
-            op_code_pc,
-            bit_operations::concat_low_high_bytes(
-                self.condition_flag_byte(),
-                self.registers[Register::A]
-            ),
-            self.full_rp_value(RegisterPair::BC),
-            self.full_rp_value(RegisterPair::DE),
-            self.full_rp_value(RegisterPair::HL),
-            self.stack_pointer,
-            self.cpu_total_state_count,
-            self.memory[op_code_pc as usize],
-            self.memory[op_code_pc as usize + 1],
-            self.memory[op_code_pc as usize + 2],
-            self.memory[op_code_pc as usize + 3],
-        );
+        self.log_current_state(op_code_pc);
+        runner::run_operation(operation, self, additional_byte_1, additional_byte_2);
+        self.cpu_total_state_count += operation.machine_states(self) as usize;
+    }
 
-        runner::run_operation(&operation, self, additional_byte_1, additional_byte_2);
-        self.cpu_total_state_count += operation.machine_states(&self) as usize;
+    fn log_current_state(&self, op_code_pc: u16) {
+        if log_enabled!(Level::Debug) {
+            debug!(
+                "PC: {:04X}, AF: {:04X}, BC: {:04X}, DE: {:04X}, HL: {:04X}, SP: {:04X}, CYC: {}\t\
+                ({:02X} {:02X} {:02X} {:02X})",
+                op_code_pc,
+                bit_operations::concat_low_high_bytes(
+                    self.condition_flag_byte(),
+                    self.registers[Register::A]
+                ),
+                self.full_rp_value(RegisterPair::BC),
+                self.full_rp_value(RegisterPair::DE),
+                self.full_rp_value(RegisterPair::HL),
+                self.stack_pointer,
+                self.cpu_total_state_count,
+                self.memory[op_code_pc as usize],
+                self.memory[op_code_pc as usize + 1],
+                self.memory[op_code_pc as usize + 2],
+                self.memory[op_code_pc as usize + 3],
+            );
+        }
     }
 }
 
