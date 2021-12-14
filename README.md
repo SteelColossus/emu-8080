@@ -1,5 +1,5 @@
 # emu-8080
-An Intel 8080 emulator following the tutorial on [emulator101.com](emulator101.com).
+An Intel 8080 emulator following the tutorial on [emulator101.com](http://emulator101.com/).
 
 ![space invaders demo](./invaders_demo.gif)
 
