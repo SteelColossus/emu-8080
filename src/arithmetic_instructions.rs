@@ -38,11 +38,7 @@ pub fn adc_mem_instruction(state: &mut State) {
 
 #[cfg_attr(test, mutate)]
 pub fn aci_instruction(state: &mut State, data: u8) {
-    let carry_value = if state.condition_flags[ConditionFlag::Carry] {
-        1
-    } else {
-        0
-    };
+    let carry_value = state.condition_flags[ConditionFlag::Carry] as u8;
     let (main_carry, main_auxiliary_carry) = state.increase_register(Register::A, data);
     let (carry_from_carry, auxiliary_carry_from_carry) =
         state.increase_register(Register::A, carry_value);
@@ -88,11 +84,7 @@ pub fn sbb_mem_instruction(state: &mut State) {
 
 #[cfg_attr(test, mutate)]
 pub fn sbi_instruction(state: &mut State, data: u8) {
-    let carry_value = if state.condition_flags[ConditionFlag::Carry] {
-        1
-    } else {
-        0
-    };
+    let carry_value = state.condition_flags[ConditionFlag::Carry] as u8;
     let (main_borrow, main_auxiliary_borrow) = state.decrease_register(Register::A, data);
     let (borrow_from_borrow, auxiliary_borrow_from_borrow) =
         state.decrease_register(Register::A, carry_value);

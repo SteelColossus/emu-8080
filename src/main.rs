@@ -61,7 +61,7 @@ fn main() -> Result<(), String> {
 
     let file_bytes = fs::read(file_name)
         .unwrap_or_else(|_| panic!("Could not read a file with filename {}", file_name));
-    machine.state_mut().load_memory(&*file_bytes);
+    machine.state_mut().load_memory(&file_bytes);
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;

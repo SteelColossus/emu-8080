@@ -14,7 +14,7 @@ fn bench_fill_memory(b: &mut Bencher) {
     let mut state = StateBuilder::default()
         .register_values(hashmap! { Register::L => 6 })
         .build();
-    state.load_memory(&*vec![
+    state.load_memory(&[
         0x05, // DCR B
         0x70, // MOV M,B
         0x23, // INX HL
