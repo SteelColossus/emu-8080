@@ -410,7 +410,7 @@ impl Default for BootHillMachine {
         BootHillMachine {
             state: {
                 let mut state = State::default();
-                state.ports = Box::new(BootHillPorts::default());
+                state.ports = Box::<BootHillPorts>::default();
                 state
             },
             inputs: BootHillInputs::default(),

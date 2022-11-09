@@ -38,8 +38,8 @@ fn main() -> Result<(), String> {
 
     let expected_extension = ".bin";
     let mut machine: Box<dyn Machine> = match file_name {
-        "invaders.bin" => Box::new(machine::SpaceInvadersMachine::default()),
-        "boothill.bin" => Box::new(machine::BootHillMachine::default()),
+        "invaders.bin" => Box::<machine::SpaceInvadersMachine>::default(),
+        "boothill.bin" => Box::<machine::BootHillMachine>::default(),
         _ => {
             if &file_name[file_name.len() - expected_extension.len()..file_name.len()]
                 == expected_extension
