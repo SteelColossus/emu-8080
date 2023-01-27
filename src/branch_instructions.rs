@@ -5,10 +5,7 @@ use mutagen::mutate;
 #[cfg_attr(test, mutate)]
 fn is_condition_true(state: &State, condition: Condition, base_instruction: &str) -> bool {
     if condition.0 == ConditionFlag::AuxiliaryCarry {
-        panic!(
-            "The auxiliary carry flag is not a supported condition for {}",
-            base_instruction
-        );
+        panic!("The auxiliary carry flag is not a supported condition for {base_instruction}");
     }
 
     state.is_condition_true(condition)
@@ -65,7 +62,7 @@ pub fn rcond_instruction(state: &mut State, condition: Condition) {
 #[cfg_attr(test, mutate)]
 pub fn rst_instruction(state: &mut State, reset_index: u8) {
     if reset_index >= 8 {
-        panic!("Invalid reset index of {}", reset_index);
+        panic!("Invalid reset index of {reset_index}");
     }
 
     call_instruction(state, reset_index * 8, 0x00);

@@ -39,12 +39,12 @@ fn print_test_output(state: &State) {
                 if memory_character == '$' {
                     break;
                 } else {
-                    print!("{}", memory_character);
+                    print!("{memory_character}");
                     memory_address += 1;
                 }
             }
         }
-        _ => panic!("Unexpected Register C value: {}", register_c),
+        _ => panic!("Unexpected Register C value: {register_c}"),
     };
 }
 
@@ -67,7 +67,7 @@ fn read_test_file(test_filename: &str) -> State {
     }
 
     let mut state = StateBuilder::default().program_counter(pc_start).build();
-    state.load_memory(&*file_bytes);
+    state.load_memory(&file_bytes);
     state
 }
 
@@ -83,8 +83,7 @@ fn assert_cpu_cycles_are_as_expected(state: &State, expected_cpu_cycles: usize) 
     let actual_cpu_cycles = state.cpu_total_state_count();
     assert_eq!(
         actual_cpu_cycles, expected_cpu_cycles,
-        "Expected test to take {} cycles, but it actually took {} cycles",
-        expected_cpu_cycles, actual_cpu_cycles
+        "Expected test to take {expected_cpu_cycles} cycles, but it actually took {actual_cpu_cycles} cycles",
     );
 }
 

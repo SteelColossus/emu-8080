@@ -37,6 +37,21 @@ pub enum RegisterPair {
     SP,
 }
 
+impl std::fmt::Display for RegisterPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                RegisterPair::BC => "BC",
+                RegisterPair::DE => "DE",
+                RegisterPair::HL => "HL",
+                RegisterPair::SP => "SP",
+            }
+        )
+    }
+}
+
 #[derive(Copy, Clone, Enum, Eq, PartialEq, Hash, Debug)]
 pub enum ConditionFlag {
     Zero,

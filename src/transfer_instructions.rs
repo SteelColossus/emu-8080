@@ -79,10 +79,7 @@ pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
 #[cfg_attr(test, mutate)]
 pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
-        panic!(
-            "The register pair {:?} is not supported by the LDAX operation",
-            register_pair
-        );
+        panic!("The register pair {register_pair} is not supported by the LDAX operation");
     }
 
     let memory_address = state.full_rp_value(register_pair);
@@ -93,10 +90,7 @@ pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
 #[cfg_attr(test, mutate)]
 pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
-        panic!(
-            "The register pair {:?} is not supported by the STAX operation",
-            register_pair
-        );
+        panic!("The register pair {register_pair} is not supported by the STAX operation");
     }
 
     let value = state.registers[Register::A];

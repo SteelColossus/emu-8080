@@ -12,8 +12,7 @@ fn assert_actual_equals_expected_for_type<T, V>(
 {
     assert_eq!(
         actual_value, expected_value,
-        "Expected {} {:?} to have value {}, but instead it had value {}",
-        friendly_name, type_being_checked, expected_value, actual_value
+        "Expected {friendly_name} {type_being_checked:?} to have value {expected_value}, but instead it had value {actual_value}",
     );
 }
 
@@ -52,8 +51,7 @@ fn assert_program_counter_has_value(state: &State, expected_value: u16) {
     let actual_value = state.program_counter;
     assert_eq!(
         actual_value, expected_value,
-        "Expected program counter to have value {:#06X}, but instead it had value {:#06X}",
-        expected_value, actual_value
+        "Expected program counter to have value {expected_value:#06X}, but instead it had value {actual_value:#06X}",
     );
 }
 
@@ -61,8 +59,7 @@ fn assert_stack_pointer_has_value(state: &State, expected_value: u16) {
     let actual_value = state.stack_pointer;
     assert_eq!(
         actual_value, expected_value,
-        "Expected stack pointer to have value {:#06X}, but instead it had value {:#06X}",
-        expected_value, actual_value
+        "Expected stack pointer to have value {expected_value:#06X}, but instead it had value {actual_value:#06X}",
     );
 }
 
@@ -70,8 +67,7 @@ fn assert_memory_location_contains_value(state: &State, memory_address: u16, exp
     let actual_value = state.memory[memory_address as usize];
     assert_eq!(
         actual_value, expected_value,
-        "Expected memory location {:#06X} to have value {}, but instead it had value {}",
-        memory_address, expected_value, actual_value
+        "Expected memory location {memory_address:#06X} to have value {expected_value}, but instead it had value {actual_value}",
     );
 }
 
@@ -79,8 +75,7 @@ fn assert_interrupts_enabled_state(state: &State, expected_interrupts_are_enable
     let actual_interrupts_are_enabled = state.are_interrupts_enabled;
     assert_eq!(
         actual_interrupts_are_enabled, expected_interrupts_are_enabled,
-        "Expected interrupts enabled to be {}, but instead it was {}",
-        expected_interrupts_are_enabled, actual_interrupts_are_enabled
+        "Expected interrupts enabled to be {expected_interrupts_are_enabled}, but instead it was {actual_interrupts_are_enabled}",
     );
 }
 
@@ -88,8 +83,7 @@ fn assert_halted_state(state: &State, expected_is_halted: bool) {
     let actual_is_halted = state.is_halted;
     assert_eq!(
         actual_is_halted, expected_is_halted,
-        "Expected halted value to be {}, but instead it was {}",
-        actual_is_halted, expected_is_halted
+        "Expected halted value to be {actual_is_halted}, but instead it was {expected_is_halted}",
     );
 }
 

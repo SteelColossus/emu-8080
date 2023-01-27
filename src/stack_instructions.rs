@@ -5,10 +5,7 @@ use mutagen::mutate;
 #[cfg_attr(test, mutate)]
 pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::SP {
-        panic!(
-            "The register pair {:?} is not supported by the PUSH operation",
-            register_pair
-        );
+        panic!("The register pair {register_pair} is not supported by the PUSH operation");
     }
 
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
@@ -33,10 +30,7 @@ pub fn push_psw_instruction(state: &mut State) {
 #[cfg_attr(test, mutate)]
 pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::SP {
-        panic!(
-            "The register pair {:?} is not supported by the POP operation",
-            register_pair
-        );
+        panic!("The register pair {register_pair} is not supported by the POP operation");
     }
 
     let sp_plus_one = state.stack_pointer.wrapping_add(1);

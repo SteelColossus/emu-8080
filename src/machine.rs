@@ -247,7 +247,7 @@ impl Ports for SpaceInvadersPorts {
         match port_number {
             0 | 1 | 2 => self.in_port_static_value(port_number).unwrap(),
             3 => shift_value(self.shift_data, self.shift_amount),
-            _ => panic!("Invalid input Port {}", port_number),
+            _ => panic!("Invalid input Port {port_number}"),
         }
     }
 
@@ -286,7 +286,7 @@ impl Ports for SpaceInvadersPorts {
                 self.watchdog = value;
                 debug!("Watchdog: {}", self.watchdog);
             }
-            _ => panic!("Invalid output Port {}", port_number),
+            _ => panic!("Invalid output Port {port_number}"),
         };
     }
 
@@ -545,7 +545,7 @@ impl Ports for BootHillPorts {
                     shifted_value
                 }
             }
-            _ => panic!("Invalid input Port {}", port_number),
+            _ => panic!("Invalid input Port {port_number}"),
         }
     }
 
@@ -563,7 +563,7 @@ impl Ports for BootHillPorts {
                 self.watchdog = value;
                 debug!("Watchdog: {}", self.watchdog);
             }
-            _ => panic!("Invalid output Port {}", port_number),
+            _ => panic!("Invalid output Port {port_number}"),
         }
     }
 

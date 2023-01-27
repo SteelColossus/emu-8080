@@ -250,7 +250,7 @@ pub fn disassemble_op_code(op_code: u8) -> Operation {
         0b11_110_011 => Operation::Di,
         0b01_110_110 => Operation::Hlt,
         0b00_000_000 => Operation::Nop,
-        _ => panic!("Unrecognized opcode: {:#010b}", op_code),
+        _ => panic!("Unrecognized opcode: {op_code:#010b}"),
     }
 }
 
@@ -270,7 +270,7 @@ mod tests {
             0b100 => Register::H,
             0b101 => Register::L,
             0b111 => Register::A,
-            _ => panic!("Invalid bit pattern of {:#b} for register", bit_pattern),
+            _ => panic!("Invalid bit pattern of {bit_pattern:#b} for register"),
         }
     }
 
@@ -284,7 +284,7 @@ mod tests {
             0b101 => (ConditionFlag::Parity, true),
             0b110 => (ConditionFlag::Sign, false),
             0b111 => (ConditionFlag::Sign, true),
-            _ => panic!("Invalid bit pattern of {:#b} for condition", bit_pattern),
+            _ => panic!("Invalid bit pattern of {bit_pattern:#b} for condition"),
         }
     }
 
@@ -294,18 +294,14 @@ mod tests {
             0b01 => RegisterPair::DE,
             0b10 => RegisterPair::HL,
             0b11 => RegisterPair::SP,
-            _ => panic!(
-                "Invalid bit pattern of {:#b} for register pair",
-                bit_pattern,
-            ),
+            _ => panic!("Invalid bit pattern of {bit_pattern:#b} for register pair"),
         }
     }
 
     fn assert_operation_equals_expected(operation: &Operation, expected_operation: &Operation) {
         assert_eq!(
             operation, expected_operation,
-            "Expected operation to be {:?}, but instead it was {:?}",
-            expected_operation, operation
+            "Expected operation to be {expected_operation:?}, but instead it was {operation:?}",
         );
     }
 

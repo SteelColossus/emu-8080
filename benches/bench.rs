@@ -6,7 +6,7 @@ use test::Bencher;
 
 #[bench]
 fn bench_create_state(b: &mut Bencher) {
-    b.iter(|| State::default());
+    b.iter(State::default);
 }
 
 #[bench]

@@ -4,7 +4,7 @@ use mutagen::mutate;
 #[cfg_attr(test, mutate)]
 pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
     if bit_index >= 8 {
-        panic!("Invalid bit index of {}", bit_index);
+        panic!("Invalid bit index of {bit_index}");
     }
 
     let shifted_value = value >> bit_index;
@@ -14,7 +14,7 @@ pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
 #[cfg_attr(test, mutate)]
 pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
     if bit_index >= 8 {
-        panic!("Invalid bit index of {}", bit_index);
+        panic!("Invalid bit index of {bit_index}");
     }
 
     let bit_mask = 1 << bit_index;
