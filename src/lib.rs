@@ -334,7 +334,7 @@ pub struct StateBuilder {
 impl StateBuilder {
     #[cfg_attr(test, mutate)]
     pub fn register_values(&mut self, register_values: HashMap<Register, u8>) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.register_values = Some(register_values);
         new
     }
@@ -344,42 +344,42 @@ impl StateBuilder {
         &mut self,
         condition_flag_values: HashMap<ConditionFlag, bool>,
     ) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.condition_flag_values = Some(condition_flag_values);
         new
     }
 
     #[cfg_attr(test, mutate)]
     pub fn program_counter(&mut self, program_counter: u16) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.program_counter = Some(program_counter);
         new
     }
 
     #[cfg_attr(test, mutate)]
     pub fn stack_pointer(&mut self, stack_pointer: u16) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.stack_pointer = Some(stack_pointer);
         new
     }
 
     #[cfg_attr(test, mutate)]
     pub fn memory_values(&mut self, memory_values: HashMap<u16, u8>) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.memory_values = Some(memory_values);
         new
     }
 
     #[cfg_attr(test, mutate)]
     pub fn interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.are_interrupts_enabled = Some(are_interrupts_enabled);
         new
     }
 
     #[cfg_attr(test, mutate)]
     pub fn halted(&mut self, is_halted: bool) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.is_halted = Some(is_halted);
         new
     }
