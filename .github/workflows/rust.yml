@@ -17,4 +17,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run unit tests
-      run: cargo test --lib --verbose
+      run: cargo +nightly test --lib --verbose
