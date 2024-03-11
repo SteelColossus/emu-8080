@@ -8,14 +8,14 @@ updates:
     schedule:
       interval: "weekly"
 
-  - package-ecosystem: "cargo" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "cargo"
+    directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "sdl2"
     groups:
       minor-updates:
         update-types:
         - "minor"
         - "patch"
-    ignore:
-      - dependency-name: "sdl2"
