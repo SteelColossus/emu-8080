@@ -9,9 +9,21 @@ edition = "2021"
 [dependencies]
 maplit = "1.0.2"
 enum-map = "2.7.3"
-sdl2 = { version = "0.35.2", features = ["mixer"] }
 log = "0.4.27"
 env_logger = "0.11.6"
+
+[dependencies.sdl2]
+version = "0.35.2"
+default-features = false
+features = ["mixer", "static-link", "use-vcpkg"]
+
+[package.metadata.vcpkg]
+dependencies = ["sdl2", "sdl2-mixer"]
+git = "https://github.com/microsoft/vcpkg"
+rev = "2025.10.17"
+
+[package.metadata.vcpkg.target]
+x86_64-pc-windows-msvc = { triplet = "x64-windows-static-md" }
 
 [dev-dependencies]
 # mutagen = { git = "https://github.com/llogiq/mutagen" }
