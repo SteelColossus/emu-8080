@@ -13,7 +13,7 @@ log = "0.4.28"
 env_logger = "0.11.8"
 
 [dependencies.sdl2]
-version = "0.35.2"
+version = "0.38.0"
 default-features = false
 features = ["mixer", "static-link", "use-vcpkg"]
 
