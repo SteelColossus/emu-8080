@@ -1,8 +1,8 @@
 use crate::{bit_operations, Condition, ConditionFlag, RegisterPair, State};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 fn is_condition_true(state: &State, condition: Condition, base_instruction: &str) -> bool {
     if condition.0 == ConditionFlag::AuxiliaryCarry {
         panic!("The auxiliary carry flag is not a supported condition for {base_instruction}");
@@ -11,19 +11,19 @@ fn is_condition_true(state: &State, condition: Condition, base_instruction: &str
     state.is_condition_true(condition)
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn jmp_instruction(state: &mut State, low_data: u8, high_data: u8) {
     state.program_counter = bit_operations::concat_low_high_bytes(low_data, high_data);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn jcond_instruction(state: &mut State, low_data: u8, high_data: u8, condition: Condition) {
     if is_condition_true(state, condition, "JMP") {
         jmp_instruction(state, low_data, high_data);
     }
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn call_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let (pc_low, pc_high) = bit_operations::split_to_low_high_bytes(state.program_counter);
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
@@ -34,14 +34,14 @@ pub fn call_instruction(state: &mut State, low_data: u8, high_data: u8) {
     state.program_counter = bit_operations::concat_low_high_bytes(low_data, high_data);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn ccond_instruction(state: &mut State, low_data: u8, high_data: u8, condition: Condition) {
     if is_condition_true(state, condition, "CALL") {
         call_instruction(state, low_data, high_data);
     }
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn ret_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
@@ -52,14 +52,14 @@ pub fn ret_instruction(state: &mut State) {
     state.stack_pointer = sp_plus_two;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn rcond_instruction(state: &mut State, condition: Condition) {
     if is_condition_true(state, condition, "RET") {
         ret_instruction(state);
     }
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn rst_instruction(state: &mut State, reset_index: u8) {
     if reset_index >= 8 {
         panic!("Invalid reset index of {reset_index}");
@@ -68,7 +68,7 @@ pub fn rst_instruction(state: &mut State, reset_index: u8) {
     call_instruction(state, reset_index * 8, 0x00);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn pchl_instruction(state: &mut State) {
     state.program_counter = state.full_rp_value(RegisterPair::HL);
 }

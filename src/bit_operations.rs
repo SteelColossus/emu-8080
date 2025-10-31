@@ -1,7 +1,7 @@
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
     if bit_index >= 8 {
         panic!("Invalid bit index of {bit_index}");
@@ -11,7 +11,7 @@ pub fn is_bit_set(value: u8, bit_index: u8) -> bool {
     shifted_value & 0b0000_0001 != 0
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
     if bit_index >= 8 {
         panic!("Invalid bit index of {bit_index}");
@@ -22,7 +22,7 @@ pub fn set_bit_in_value(value: &mut u8, bit_index: u8, bit_flag: bool) {
     *value = *value & !bit_mask | bit_value_mask;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn parity(value: u8) -> bool {
     let mut parity = true;
 
@@ -35,17 +35,17 @@ pub fn parity(value: u8) -> bool {
     parity
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn concat_low_high_bytes(low_byte: u8, high_byte: u8) -> u16 {
     u16::from(high_byte) << 8 | u16::from(low_byte)
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn split_to_low_high_bytes(value: u16) -> (u8, u8) {
     ((value & 0b0000_0000_1111_1111) as u8, (value >> 8) as u8)
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool) -> bool {
     let nibble_mask = 0b0000_1111;
     let lower_value_1 = value_1 & nibble_mask;
@@ -72,7 +72,7 @@ pub fn calculate_auxiliary_carry(value_1: u8, value_2: u8, is_subtraction: bool)
     }
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn reverse_byte(value: u8) -> u8 {
     let mut reverse_bit_mask = 0b1000_0000;
     let mut reverse_byte = 0;

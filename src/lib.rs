@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use enum_map::{Enum, EnumMap};
 use log::{debug, log_enabled, Level};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
 pub mod arithmetic_instructions;
 #[cfg(test)]
@@ -107,7 +107,7 @@ pub struct State {
 }
 
 impl Default for State {
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     fn default() -> Self {
         StateBuilder::default().build()
     }
@@ -120,12 +120,12 @@ impl State {
         }
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn memory_value_at_pc(&self) -> u8 {
         self.memory[self.program_counter as usize]
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn increase_register(&mut self, register: Register, relative_value: u8) -> (bool, bool) {
         let register_to_adjust = &mut self.registers[register];
         let (result, carry) = register_to_adjust.overflowing_add(relative_value);
@@ -135,7 +135,7 @@ impl State {
         (carry, auxiliary_carry)
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn decrease_register(&mut self, register: Register, relative_value: u8) -> (bool, bool) {
         let register_to_adjust = &mut self.registers[register];
         let (result, borrow) = register_to_adjust.overflowing_sub(relative_value);
@@ -145,7 +145,7 @@ impl State {
         (borrow, auxiliary_borrow)
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_register_by_function_with_value<F>(
         &mut self,
         target_register: Register,
@@ -158,7 +158,7 @@ impl State {
         self.registers[target_register] = f(value, target_register_value);
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn exchange_register_values(&mut self, register1: Register, register2: Register) {
         let register1_value = self.registers[register1];
         let register2_value = self.registers[register2];
@@ -166,20 +166,20 @@ impl State {
         self.registers[register1] = register2_value;
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_condition_flags_from_result(&mut self, result: u8) {
         self.condition_flags[ConditionFlag::Zero] = result == 0;
         self.condition_flags[ConditionFlag::Sign] = bit_operations::is_bit_set(result, 7);
         self.condition_flags[ConditionFlag::Parity] = bit_operations::parity(result);
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_condition_flags_from_register_value(&mut self, register: Register) {
         let register_value = self.registers[register];
         self.set_condition_flags_from_result(register_value);
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn condition_flag_byte(&self) -> u8 {
         let mut condition_flag_byte = 0b0000_0010;
         for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
@@ -192,7 +192,7 @@ impl State {
         condition_flag_byte
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_condition_flag_byte(&mut self, memory_address: u16) {
         let condition_flag_byte = self.memory[memory_address as usize];
         for (condition_flag, bit_index) in &CONDITION_FLAG_BITS {
@@ -201,12 +201,12 @@ impl State {
         }
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn is_condition_true(&self, condition: Condition) -> bool {
         self.condition_flags[condition.0] == condition.1
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn low_high_rp_value(&self, register_pair: RegisterPair) -> (u8, u8) {
         match register_pair {
             RegisterPair::BC => (self.registers[Register::C], self.registers[Register::B]),
@@ -220,7 +220,7 @@ impl State {
         }
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn full_rp_value(&self, register_pair: RegisterPair) -> u16 {
         if register_pair == RegisterPair::SP {
             return self.stack_pointer;
@@ -230,7 +230,7 @@ impl State {
         bit_operations::concat_low_high_bytes(low_value, high_value)
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_low_high_rp_value(
         &mut self,
         register_pair: RegisterPair,
@@ -256,7 +256,7 @@ impl State {
         };
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn set_full_rp_value(&mut self, register_pair: RegisterPair, value: u16) {
         if register_pair == RegisterPair::SP {
             self.stack_pointer = value;
@@ -266,7 +266,7 @@ impl State {
         self.set_low_high_rp_value(register_pair, low_value, high_value);
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn cpu_total_state_count(&self) -> usize {
         self.cpu_total_state_count
     }
@@ -332,14 +332,14 @@ pub struct StateBuilder {
 }
 
 impl StateBuilder {
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn register_values(&mut self, register_values: HashMap<Register, u8>) -> &mut Self {
         let new = self;
         new.register_values = Some(register_values);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn condition_flag_values(
         &mut self,
         condition_flag_values: HashMap<ConditionFlag, bool>,
@@ -349,42 +349,42 @@ impl StateBuilder {
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn program_counter(&mut self, program_counter: u16) -> &mut Self {
         let new = self;
         new.program_counter = Some(program_counter);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn stack_pointer(&mut self, stack_pointer: u16) -> &mut Self {
         let new = self;
         new.stack_pointer = Some(stack_pointer);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn memory_values(&mut self, memory_values: HashMap<u16, u8>) -> &mut Self {
         let new = self;
         new.memory_values = Some(memory_values);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn interrupts_enabled(&mut self, are_interrupts_enabled: bool) -> &mut Self {
         let new = self;
         new.are_interrupts_enabled = Some(are_interrupts_enabled);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn halted(&mut self, is_halted: bool) -> &mut Self {
         let new = self;
         new.is_halted = Some(is_halted);
         new
     }
 
-    #[cfg_attr(test, mutate)]
+    // #[cfg_attr(test, mutate)]
     pub fn build(&self) -> State {
         let mut registers = RegisterState::default();
         let mut condition_flags = ConditionFlags::default();

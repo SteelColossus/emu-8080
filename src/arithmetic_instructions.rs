@@ -1,21 +1,21 @@
 use crate::{bit_operations, ConditionFlag, Register, RegisterPair, State};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn add_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.registers[source_register];
     adi_instruction(state, source_register_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn add_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     adi_instruction(state, memory_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn adi_instruction(state: &mut State, data: u8) {
     let (carry, auxiliary_carry) = state.increase_register(Register::A, data);
     state.set_condition_flags_from_register_value(Register::A);
@@ -23,20 +23,20 @@ pub fn adi_instruction(state: &mut State, data: u8) {
     state.condition_flags[ConditionFlag::AuxiliaryCarry] = auxiliary_carry;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn adc_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.registers[source_register];
     aci_instruction(state, source_register_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn adc_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     aci_instruction(state, memory_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn aci_instruction(state: &mut State, data: u8) {
     let carry_value = state.condition_flags[ConditionFlag::Carry] as u8;
     let (main_carry, main_auxiliary_carry) = state.increase_register(Register::A, data);
@@ -48,20 +48,20 @@ pub fn aci_instruction(state: &mut State, data: u8) {
         main_auxiliary_carry || auxiliary_carry_from_carry;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sub_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.registers[source_register];
     sui_instruction(state, source_register_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sub_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     sui_instruction(state, memory_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sui_instruction(state: &mut State, data: u8) {
     let (borrow, auxiliary_borrow) = state.decrease_register(Register::A, data);
     state.set_condition_flags_from_register_value(Register::A);
@@ -69,20 +69,20 @@ pub fn sui_instruction(state: &mut State, data: u8) {
     state.condition_flags[ConditionFlag::AuxiliaryCarry] = auxiliary_borrow;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sbb_instruction(state: &mut State, source_register: Register) {
     let source_register_value = state.registers[source_register];
     sbi_instruction(state, source_register_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sbb_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
     sbi_instruction(state, memory_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sbi_instruction(state: &mut State, data: u8) {
     let carry_value = state.condition_flags[ConditionFlag::Carry] as u8;
     let (main_borrow, main_auxiliary_borrow) = state.decrease_register(Register::A, data);
@@ -96,14 +96,14 @@ pub fn sbi_instruction(state: &mut State, data: u8) {
         main_auxiliary_borrow && auxiliary_borrow_from_borrow;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn inr_instruction(state: &mut State, register: Register) {
     let (_, auxiliary_carry) = state.increase_register(register, 1);
     state.set_condition_flags_from_register_value(register);
     state.condition_flags[ConditionFlag::AuxiliaryCarry] = auxiliary_carry;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn inr_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
@@ -114,14 +114,14 @@ pub fn inr_mem_instruction(state: &mut State) {
         bit_operations::calculate_auxiliary_carry(memory_value, 1, false);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn dcr_instruction(state: &mut State, register: Register) {
     let (_, auxiliary_borrow) = state.decrease_register(register, 1);
     state.set_condition_flags_from_register_value(register);
     state.condition_flags[ConditionFlag::AuxiliaryCarry] = auxiliary_borrow;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn dcr_mem_instruction(state: &mut State) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let memory_value = state.memory[memory_address as usize];
@@ -132,21 +132,21 @@ pub fn dcr_mem_instruction(state: &mut State) {
         bit_operations::calculate_auxiliary_carry(memory_value, 1, true);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn inx_instruction(state: &mut State, register_pair: RegisterPair) {
     let mut value = state.full_rp_value(register_pair);
     value = value.wrapping_add(1);
     state.set_full_rp_value(register_pair, value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn dcx_instruction(state: &mut State, register_pair: RegisterPair) {
     let mut value = state.full_rp_value(register_pair);
     value = value.wrapping_sub(1);
     state.set_full_rp_value(register_pair, value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
     let hl_value = state.full_rp_value(RegisterPair::HL);
     let register_pair_value = state.full_rp_value(register_pair);
@@ -155,7 +155,7 @@ pub fn dad_instruction(state: &mut State, register_pair: RegisterPair) {
     state.condition_flags[ConditionFlag::Carry] = carry;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn daa_instruction(state: &mut State) {
     let mut result = state.registers[Register::A];
     let mut carry = false;

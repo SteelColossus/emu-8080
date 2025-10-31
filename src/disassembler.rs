@@ -1,9 +1,9 @@
 use crate::{ConditionFlag, Operation, Register, RegisterPair};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
 #[allow(clippy::unusual_byte_groupings)]
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn disassemble_op_code(op_code: u8) -> Operation {
     match op_code {
         0b01_000_000 => Operation::Mov(Register::B, Register::B),

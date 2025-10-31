@@ -1,38 +1,38 @@
 use crate::{bit_operations, Register, RegisterPair, State};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn mov_instruction(state: &mut State, from_register: Register, to_register: Register) {
     let from_register_value = state.registers[from_register];
     mvi_instruction(state, to_register, from_register_value);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn mov_from_mem_instruction(state: &mut State, register: Register) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     let data = state.memory[memory_address as usize];
     mvi_instruction(state, register, data);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn mov_to_mem_instruction(state: &mut State, register: Register) {
     let data = state.registers[register];
     mvi_mem_instruction(state, data);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn mvi_instruction(state: &mut State, register: Register, data: u8) {
     state.registers[register] = data;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn mvi_mem_instruction(state: &mut State, data: u8) {
     let memory_address = state.full_rp_value(RegisterPair::HL);
     state.memory[memory_address as usize] = data;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn lxi_instruction(
     state: &mut State,
     register_pair: RegisterPair,
@@ -42,21 +42,21 @@ pub fn lxi_instruction(
     state.set_low_high_rp_value(register_pair, low_data, high_data);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn lda_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let memory_location_value = state.memory[memory_address as usize];
     state.registers[Register::A] = memory_location_value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sta_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let accumulator_value = state.registers[Register::A];
     state.memory[memory_address as usize] = accumulator_value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let first_memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
@@ -66,7 +66,7 @@ pub fn lhld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     state.registers[Register::H] = second_memory_value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     let first_memory_address = bit_operations::concat_low_high_bytes(low_data, high_data);
     let second_memory_address = first_memory_address.wrapping_add(1);
@@ -76,7 +76,7 @@ pub fn shld_instruction(state: &mut State, low_data: u8, high_data: u8) {
     state.memory[second_memory_address as usize] = h_register_value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
         panic!("The register pair {register_pair} is not supported by the LDAX operation");
@@ -87,7 +87,7 @@ pub fn ldax_instruction(state: &mut State, register_pair: RegisterPair) {
     state.registers[Register::A] = value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::HL || register_pair == RegisterPair::SP {
         panic!("The register pair {register_pair} is not supported by the STAX operation");
@@ -98,7 +98,7 @@ pub fn stax_instruction(state: &mut State, register_pair: RegisterPair) {
     state.memory[memory_address as usize] = value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn xchg_instruction(state: &mut State) {
     state.exchange_register_values(Register::D, Register::H);
     state.exchange_register_values(Register::E, Register::L);

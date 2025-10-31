@@ -1,8 +1,8 @@
 use crate::{Register, RegisterPair, State};
-#[cfg(test)]
-use mutagen::mutate;
+// #[cfg(test)]
+// use mutagen::mutate;
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::SP {
         panic!("The register pair {register_pair} is not supported by the PUSH operation");
@@ -16,7 +16,7 @@ pub fn push_instruction(state: &mut State, register_pair: RegisterPair) {
     state.stack_pointer = sp_minus_two;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn push_psw_instruction(state: &mut State) {
     let sp_minus_one = state.stack_pointer.wrapping_sub(1);
     let sp_minus_two = state.stack_pointer.wrapping_sub(2);
@@ -27,7 +27,7 @@ pub fn push_psw_instruction(state: &mut State) {
     state.stack_pointer = sp_minus_two;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
     if register_pair == RegisterPair::SP {
         panic!("The register pair {register_pair} is not supported by the POP operation");
@@ -45,7 +45,7 @@ pub fn pop_instruction(state: &mut State, register_pair: RegisterPair) {
     state.stack_pointer = sp_plus_two;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn pop_psw_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let sp_plus_two = state.stack_pointer.wrapping_add(2);
@@ -55,7 +55,7 @@ pub fn pop_psw_instruction(state: &mut State) {
     state.stack_pointer = sp_plus_two;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn xthl_instruction(state: &mut State) {
     let sp_plus_one = state.stack_pointer.wrapping_add(1);
     let low_memory_value = state.memory[state.stack_pointer as usize];
@@ -68,22 +68,22 @@ pub fn xthl_instruction(state: &mut State) {
     state.memory[sp_plus_one as usize] = h_register_value;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn sphl_instruction(state: &mut State) {
     state.stack_pointer = state.full_rp_value(RegisterPair::HL);
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn ei_instruction(state: &mut State) {
     state.are_interrupts_enabled = true;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn di_instruction(state: &mut State) {
     state.are_interrupts_enabled = false;
 }
 
-#[cfg_attr(test, mutate)]
+// #[cfg_attr(test, mutate)]
 pub fn hlt_instruction(state: &mut State) {
     state.is_halted = true;
 }
