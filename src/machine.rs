@@ -7,7 +7,7 @@ use sdl2::mixer;
 use sdl2::mixer::{Channel, Chunk};
 use sdl2::pixels::Color;
 
-use emu_8080::{bit_operations, Ports, State};
+use emu_8080::{Ports, State, bit_operations};
 
 pub trait Machine {
     fn state(&self) -> &State;

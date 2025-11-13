@@ -1,4 +1,4 @@
-use emu_8080::{disassembler, Operation, Register, RegisterPair, State, StateBuilder};
+use emu_8080::{Operation, Register, RegisterPair, State, StateBuilder, disassembler};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;

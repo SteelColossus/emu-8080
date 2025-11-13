@@ -1,4 +1,4 @@
-use crate::{ConditionFlag, ConditionFlags, Register, RegisterState, State, MEMORY_SIZE};
+use crate::{ConditionFlag, ConditionFlags, MEMORY_SIZE, Register, RegisterState, State};
 use std::fmt::{Debug, Display};
 
 fn assert_actual_equals_expected_for_type<T, V>(

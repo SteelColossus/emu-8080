@@ -1,6 +1,6 @@
 #![feature(test)]
 extern crate test;
-use emu_8080::{runner, Register, State, StateBuilder};
+use emu_8080::{Register, State, StateBuilder, runner};
 use maplit::hashmap;
 use test::Bencher;
 

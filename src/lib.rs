@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use enum_map::{Enum, EnumMap};
-use log::{debug, log_enabled, Level};
+use log::{Level, debug, log_enabled};
 // #[cfg(test)]
 // use mutagen::mutate;
 

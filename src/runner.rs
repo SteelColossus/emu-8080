@@ -1,6 +1,6 @@
 use crate::{
-    arithmetic_instructions, branch_instructions, logical_instructions, stack_instructions, transfer_instructions, Operation,
-    Register, State,
+    Operation, Register, State, arithmetic_instructions, branch_instructions, logical_instructions,
+    stack_instructions, transfer_instructions,
 };
 
 pub fn run_operation(

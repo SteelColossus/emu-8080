@@ -4,14 +4,14 @@ use std::time::{Duration, Instant};
 use std::{env, fs};
 
 use log::debug;
+use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mixer;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Texture, WindowCanvas};
-use sdl2::EventPump;
 
-use emu_8080::{runner, State};
+use emu_8080::{State, runner};
 
 use crate::machine::Machine;
 

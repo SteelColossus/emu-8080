@@ -1,4 +1,4 @@
-use crate::{bit_operations, Register, RegisterPair, State};
+use crate::{Register, RegisterPair, State, bit_operations};
 // #[cfg(test)]
 // use mutagen::mutate;
 
@@ -107,8 +107,8 @@ pub fn xchg_instruction(state: &mut State) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base_test_functions::assert_state_is_as_expected;
     use crate::StateBuilder;
+    use crate::base_test_functions::assert_state_is_as_expected;
     use maplit::hashmap;
 
     #[test]

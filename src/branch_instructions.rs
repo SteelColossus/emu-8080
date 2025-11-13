@@ -1,4 +1,4 @@
-use crate::{bit_operations, Condition, ConditionFlag, RegisterPair, State};
+use crate::{Condition, ConditionFlag, RegisterPair, State, bit_operations};
 // #[cfg(test)]
 // use mutagen::mutate;
 
