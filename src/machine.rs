@@ -245,6 +245,7 @@ fn set_in_port_from_flags(
 impl Ports for SpaceInvadersPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
+            #[allow(clippy::manual_range_patterns)]
             0 | 1 | 2 => self.in_port_static_value(port_number).unwrap(),
             3 => shift_value(self.shift_data, self.shift_amount),
             _ => panic!("Invalid input Port {port_number}"),
@@ -519,6 +520,7 @@ struct BootHillPorts {
     watchdog: u8,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for BootHillPorts {
     fn default() -> Self {
         BootHillPorts {
@@ -536,6 +538,7 @@ impl Default for BootHillPorts {
 impl Ports for BootHillPorts {
     fn read_in_port(&self, port_number: u8) -> u8 {
         match port_number {
+            #[allow(clippy::manual_range_patterns)]
             0 | 1 | 2 => self.in_port_static_value(port_number).unwrap(),
             3 => {
                 let shifted_value = shift_value(self.shift_data, self.shift_amount);

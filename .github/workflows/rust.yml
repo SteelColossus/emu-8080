@@ -13,18 +13,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    - uses: dtolnay/rust-toolchain@nightly
-    - name: Install cargo-vcpkg
-      run: cargo install cargo-vcpkg
-    - name: Install extra build dependencies (Linux only)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y autoconf automake libtool pkg-config libltdl-dev
-    - name: Install dependencies
-      run: cargo vcpkg -v build
-    - name: Build project
-      run: cargo build --verbose
-    - name: Run unit tests
-      run: cargo test --lib --verbose
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-vcpkg
+        run: cargo install cargo-vcpkg
+      - name: Install extra build dependencies (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config libltdl-dev
+      - name: Install dependencies
+        run: cargo vcpkg -v build
+      - name: Build project
+        run: cargo build --verbose
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+      - name: Run unit tests
+        run: cargo test --lib --verbose

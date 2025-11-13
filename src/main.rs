@@ -202,6 +202,7 @@ fn screen_pixel_data(machine: &dyn Machine) -> [u8; SCREEN_DATA_SIZE] {
     screen_pixel_data
 }
 
+#[allow(clippy::too_many_arguments)]
 fn set_original_column_byte_pixels(
     machine: &dyn Machine,
     screen_pixel_data: &mut [u8; SCREEN_DATA_SIZE],

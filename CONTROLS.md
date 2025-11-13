@@ -1,4 +1,5 @@
 ## Space Invaders
+
 | Key           | Action           |
 |---------------|------------------|
 | Right Shift   | Insert Coin      |
@@ -10,6 +11,7 @@
 | Backquote (`) | Tilt Machine     |
 
 ## Boot Hill
+
 | Key         | Action              |
 |-------------|---------------------|
 | Right Shift | Insert Coin         |
