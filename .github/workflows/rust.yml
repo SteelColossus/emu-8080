@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
       - name: Install cargo-vcpkg
         run: cargo install cargo-vcpkg
       - name: Install extra build dependencies (Linux only)
